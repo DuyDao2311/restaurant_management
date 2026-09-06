@@ -1,0 +1,124 @@
+from fastapi import FastAPI, Depends, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import text, inspect
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.database import engine, get_db
+
+# Import all models to register them with SQLAlchemy
+from app.models import (
+    Role, User, RestaurantTable, TableQRCode,
+    Category, MenuItem, Reservation, Order,
+    OrderItem, Payment, Notification
+)
+from app.core.database import Base
+
+app = FastAPI(
+    title="Restaurant Management API",
+    version="1.0.0"
+)
+
+@app.get("/")
+def root():
+    return {
+        "message": "Restaurant Management API is running"
+    }
+
+@app.get("/health/db")
+def health_db(db: Session = Depends(get_db)):
+    try:
+        result = db.execute(text("SELECT DATABASE();")).fetchone()
+
+        if result and result[0]:
+            db_name = result[0]
+            if db_name == "restaurant_management":
+                return {
+                    "status": "ok",
+                    "database": "connected",
+                    "database_name": db_name
+                }
+            else:
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={
+                        "status": "ok",
+                        "database": "connected",
+                        "database_name": db_name
+                    }
+                )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "status": "error",
+                    "database": "disconnected"
+                }
+            )
+
+    except SQLAlchemyError:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "database": "disconnected"
+            }
+        )
+
+@app.get("/health/models")
+def health_models():
+    """Check that all SQLAlchemy models are loaded."""
+    try:
+        model_tables = list(Base.metadata.tables.keys())
+        return {
+            "status": "ok",
+            "models_loaded": len(model_tables),
+            "models": sorted(model_tables)
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "detail": str(e)
+            }
+        )
+
+@app.get("/health/tables")
+def health_tables():
+    """Check that all expected tables exist in the database."""
+    try:
+        inspector = inspect(engine)
+        db_tables = inspector.get_table_names()
+        return {
+            "status": "ok",
+            "tables": sorted(db_tables)
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "detail": str(e)
+            }
+        )
+
+@app.get("/health/orm")
+def health_orm(db: Session = Depends(get_db)):
+    """Test that ORM can query the database."""
+    try:
+        roles_count = db.query(Role).count()
+        tables_count = db.query(RestaurantTable).count()
+        return {
+            "status": "ok",
+            "roles_count": roles_count,
+            "tables_count": tables_count
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "detail": str(e)
+            }
+        )
