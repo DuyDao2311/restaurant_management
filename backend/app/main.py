@@ -14,10 +14,59 @@ from app.models import (
 )
 from app.core.database import Base
 
+# Import routers
+from app.routers import auth, roles, users, tables, categories, menu, menu_items
+
 app = FastAPI(
     title="Restaurant Management API",
     version="1.0.0"
 )
+
+# ==================== Register Routers ====================
+
+app.include_router(
+    auth.router,
+    prefix="/api/auth",
+    tags=["Authentication"]
+)
+
+app.include_router(
+    roles.router,
+    prefix="/api/roles",
+    tags=["Roles"]
+)
+
+app.include_router(
+    users.router,
+    prefix="/api/users",
+    tags=["Users"]
+)
+
+app.include_router(
+    tables.router,
+    prefix="/api/tables",
+    tags=["Tables"]
+)
+
+app.include_router(
+    categories.router,
+    prefix="/api/categories",
+    tags=["Categories"]
+)
+
+app.include_router(
+    menu.router,
+    prefix="/api/menu",
+    tags=["Menu"]
+)
+
+app.include_router(
+    menu_items.router,
+    prefix="/api/menu-items",
+    tags=["Menu Items"]
+)
+
+# ==================== Health Check Endpoints ====================
 
 @app.get("/")
 def root():
