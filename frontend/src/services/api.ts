@@ -11,7 +11,7 @@ const api = axios.create({
 // Request Interceptor: Tự động gắn JWT token vào header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,7 +28,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Token hết hạn hoặc không hợp lệ -> xóa token và redirect
-      localStorage.removeItem('access_token');
+      sessionStorage.removeItem('access_token');
       // Tránh vòng lặp nếu đang ở trang login
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

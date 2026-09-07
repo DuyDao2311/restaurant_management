@@ -101,6 +101,7 @@ def create_menu_item(
         now = datetime.now()
         new_item = MenuItem(
             category_id=item_data.category_id,
+            code=item_data.code,
             name=item_data.name,
             description=item_data.description,
             price=item_data.price,
@@ -161,6 +162,8 @@ def update_menu_item(
     try:
         if item_data.category_id is not None:
             item.category_id = item_data.category_id
+        if item_data.code is not None:
+            item.code = item_data.code
         if item_data.name is not None:
             item.name = item_data.name
         if item_data.description is not None:

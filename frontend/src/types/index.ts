@@ -46,3 +46,32 @@ export interface AuthContextType {
   login: (phone: string, password: string) => Promise<LoginResponse>;
   logout: () => void;
 }
+
+// ==================== Category ====================
+
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+  image?: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ==================== Menu Item ====================
+
+export interface MenuItem {
+  id: number;
+  category_id: number;
+  code?: string;
+  name: string;
+  description?: string;
+  price: number;
+  image?: string;
+  status: string;
+  is_available: boolean;
+  created_at?: string;
+  updated_at?: string;
+  category?: Category; // For frontend display
+}

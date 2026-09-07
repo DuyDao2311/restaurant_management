@@ -10,7 +10,7 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('access_token'));
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem('access_token'));
   const [loading, setLoading] = useState<boolean>(true);
 
   const isAuthenticated = !!user && !!token;
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (phone: string, password: string): Promise<LoginResponse> => {
     const data = await authService.login(phone, password);
     if (data.success && data.access_token) {
-      localStorage.setItem('access_token', data.access_token);
+      sessionStorage.setItem('access_token', data.access_token);
       setToken(data.access_token);
       setUser(data.user);
       return data;
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const handleLogout = (): void => {
-    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('access_token');
     setToken(null);
     setUser(null);
   };

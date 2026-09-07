@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 class MenuItemCreate(BaseModel):
     category_id: int
+    code: Optional[str] = None
     name: str
     description: Optional[str] = None
     price: Decimal
@@ -38,6 +39,7 @@ class MenuItemCreate(BaseModel):
 
 class MenuItemUpdate(BaseModel):
     category_id: Optional[int] = None
+    code: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = None
@@ -74,6 +76,7 @@ class MenuItemResponse(BaseModel):
 
     id: int
     category_id: int
+    code: Optional[str] = None
     name: str
     description: Optional[str] = None
     price: Decimal
