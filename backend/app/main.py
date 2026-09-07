@@ -17,10 +17,22 @@ from app.core.database import Base
 # Import routers
 from app.routers import auth, roles, users, tables, categories, menu, menu_items
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Restaurant Management API",
     version="1.0.0"
 )
+
+# Cấu hình CORS để cho phép Frontend React gọi API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], # Domain của Frontend Vite
+    allow_credentials=True,
+    allow_methods=["*"], # Cho phép tất cả các method (GET, POST, PUT, DELETE, v.v.)
+    allow_headers=["*"], # Cho phép tất cả các header (bao gồm Authorization)
+)
+
 
 # ==================== Register Routers ====================
 
