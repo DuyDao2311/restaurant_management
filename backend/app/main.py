@@ -14,8 +14,7 @@ from app.models import (
 )
 from app.core.database import Base
 
-# Import routers
-from app.routers import auth, roles, users, tables, categories, menu, menu_items
+from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -76,6 +75,18 @@ app.include_router(
     menu_items.router,
     prefix="/api/menu-items",
     tags=["Menu Items"]
+)
+
+app.include_router(
+    orders.router,
+    prefix="/api/orders",
+    tags=["Orders"]
+)
+
+app.include_router(
+    staff_calls.router,
+    prefix="/api/staff-calls",
+    tags=["Staff Calls"]
 )
 
 # ==================== Health Check Endpoints ====================

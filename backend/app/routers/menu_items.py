@@ -22,12 +22,11 @@ def get_menu_items(
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status (ACTIVE, INACTIVE)"),
     search: Optional[str] = Query(None, description="Search by item name"),
-    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Get all menu items with optional filters.
-    Requires: any authenticated user (ADMIN, STAFF, CUSTOMER).
+    Public endpoint.
 
     Filters:
     - category_id: filter by category
@@ -64,10 +63,9 @@ def get_menu_items(
 @router.get("/{item_id}")
 def get_menu_item(
     item_id: int,
-    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get a menu item by ID. Requires: any authenticated user."""
+    """Get a menu item by ID. Public endpoint."""
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     if not item:
         return JSONResponse(

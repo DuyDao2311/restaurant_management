@@ -1,8 +1,14 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
-const ProtectedRoute = () => {
-  const { isAuthenticated, loading } = useAuth();
+interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -19,7 +25,36 @@ const ProtectedRoute = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Chuyển hướng về trang đăng nhập, lưu lại URL hiện tại để quay lại sau
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && user?.role) {
+    const isAuthorized = allowedRoles.includes(user.role);
+    if (!isAuthorized) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShieldAlert size={32} />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Truy cập bị từ chối</h1>
+            <p className="text-gray-500 mb-8">
+              Bạn không có quyền truy cập vào trang này. Vui lòng liên hệ quản trị viên nếu bạn cho rằng đây là lỗi.
+            </p>
+
+            <button
+              onClick={() => window.history.back()}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white hover:bg-gray-800 font-semibold rounded-xl transition-colors"
+            >
+              <ArrowLeft size={18} />
+              Quay lại trang trước
+            </button>
+          </div>
+        </div>
+      );
+    }
   }
 
   return <Outlet />;

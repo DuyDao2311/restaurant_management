@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, ShoppingCart, Clock, RefreshCw, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, ShoppingCart, Clock, RefreshCw, Eye } from 'lucide-react';
 import { orderService } from '../../../services/orderService';
 import { Order } from '../../../types/order.types';
-import OrderDetailModal from './OrderDetailModal';
+import OrderDetailModal from '../../admin/Orders/OrderDetailModal';
 
-const OrdersPage = () => {
+const StaffOrders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,7 +20,7 @@ const OrdersPage = () => {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await orderService.getOrders(1, 100, statusFilter || undefined);
+      const response = await orderService.getOrders(1, 50, statusFilter || undefined);
       setOrders(response.items || []);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -68,17 +70,24 @@ const OrdersPage = () => {
       setSelectedOrder(orderData);
     } catch (error) {
       console.error('Failed to fetch order details:', error);
-      alert('Could not load order details.');
+      alert('Không thể tải chi tiết đơn hàng.');
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-in fade-in">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý Đơn hàng</h1>
-          <p className="text-gray-500 mt-1">Xem và quản lý tất cả đơn hàng của nhà hàng</p>
+          <p className="text-gray-500 mt-1">Quản lý và theo dõi các đơn hàng của nhà hàng</p>
         </div>
+        <button
+          onClick={() => navigate('/staff/orders/create')}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium"
+        >
+          <Plus size={20} />
+          Tạo Đơn Mới
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -160,7 +169,7 @@ const OrdersPage = () => {
                       <span className="font-semibold text-gray-900">{order.order_code}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm font-medium border border-gray-200">
+                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm font-medium">
                         Bàn {order.table_id}
                       </span>
                     </td>
@@ -206,4 +215,4 @@ const OrdersPage = () => {
   );
 };
 
-export default OrdersPage;
+export default StaffOrders;

@@ -17,10 +17,9 @@ router = APIRouter()
 # ---------- GET /api/categories ----------
 @router.get("")
 def get_categories(
-    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get all categories. Requires: any authenticated user (ADMIN, STAFF, CUSTOMER)."""
+    """Get all categories. Public endpoint."""
     try:
         categories = db.query(Category).all()
         return {
@@ -39,10 +38,9 @@ def get_categories(
 @router.get("/{category_id}")
 def get_category(
     category_id: int,
-    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get a category by ID. Requires: any authenticated user."""
+    """Get a category by ID. Public endpoint."""
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         return JSONResponse(
