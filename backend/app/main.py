@@ -10,11 +10,11 @@ from app.core.database import engine, get_db
 from app.models import (
     Role, User, RestaurantTable, TableQRCode,
     Category, MenuItem, Reservation, Order,
-    OrderItem, Payment, Notification
+    OrderItem, Payment, Notification, TableSession
 )
 from app.core.database import Base
 
-from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls
+from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -87,6 +87,30 @@ app.include_router(
     staff_calls.router,
     prefix="/api/staff-calls",
     tags=["Staff Calls"]
+)
+
+app.include_router(
+    reservations.router,
+    prefix="/api/reservations",
+    tags=["Reservations"]
+)
+
+app.include_router(
+    admin_reservations.router,
+    prefix="/api/admin/reservations",
+    tags=["Admin Reservations"]
+)
+
+app.include_router(
+    staff_reservations.router,
+    prefix="/api/staff/reservations",
+    tags=["Staff Reservations"]
+)
+
+app.include_router(
+    table_sessions.router,
+    prefix="/api",
+    tags=["Table Sessions"]
 )
 
 # ==================== Health Check Endpoints ====================

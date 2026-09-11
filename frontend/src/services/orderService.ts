@@ -3,7 +3,7 @@ import { Order, OrderCreate, OrderListResponse, OrderStatusUpdate } from '../typ
 
 export const orderService = {
   createOrder: async (data: OrderCreate): Promise<Order> => {
-    const response = await api.post('/orders/', data);
+    const response = await api.post('/staff/orders', data);
     return response.data;
   },
 
@@ -12,7 +12,7 @@ export const orderService = {
     size: number = 10,
     status?: string,
     orderCode?: string,
-    tableId?: number
+    tableSessionId?: number
   ): Promise<OrderListResponse> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
@@ -20,19 +20,24 @@ export const orderService = {
 
     if (status) params.append('status', status);
     if (orderCode) params.append('order_code', orderCode);
-    if (tableId) params.append('table_id', tableId.toString());
+    if (tableSessionId) params.append('table_session_id', tableSessionId.toString());
 
-    const response = await api.get(`/orders/?${params.toString()}`);
+    const response = await api.get(`/staff/orders?${params.toString()}`);
     return response.data;
   },
 
   getOrderById: async (id: number): Promise<Order> => {
-    const response = await api.get(`/orders/${id}`);
+    const response = await api.get(`/staff/orders/${id}`);
     return response.data;
   },
 
   updateOrderStatus: async (id: number, data: OrderStatusUpdate): Promise<Order> => {
-    const response = await api.patch(`/orders/${id}/status`, data);
+    const response = await api.patch(`/staff/orders/${id}/status`, data);
+    return response.data;
+  },
+
+  cancelOrder: async (id: number): Promise<Order> => {
+    const response = await api.post(`/staff/orders/${id}/cancel`);
     return response.data;
   },
 };

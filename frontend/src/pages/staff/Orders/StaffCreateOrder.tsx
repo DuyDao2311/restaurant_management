@@ -4,11 +4,14 @@ import { ArrowLeft, Plus, Minus, Search, ShoppingBag } from 'lucide-react';
 import { menuService } from '../../../services/menuService';
 import { tableService } from '../../../services/tableService';
 import { orderService } from '../../../services/orderService';
+import { tableSessionService } from '../../../services/tableSessionService';
 import { MenuItem } from '../../../types';
 import { RestaurantTable } from '../../../types/table';
+import { TableSession } from '../../../types/table_session.types';
 
 interface CartItem extends MenuItem {
   quantity: number;
+  note?: string;
 }
 
 const StaffCreateOrder = () => {
@@ -16,11 +19,14 @@ const StaffCreateOrder = () => {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [activeSession, setActiveSession] = useState<TableSession | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [orderNote, setOrderNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -33,13 +39,33 @@ const StaffCreateOrder = () => {
         tableService.getTables(),
         menuService.getAllMenuItems()
       ]);
-      // Only show available tables or tables that can be ordered at
+      // Staff should only order for OCCUPIED tables which have an ACTIVE session
       const allTables = tablesData.data || [];
-      setTables(allTables.filter(t => t.status === 'AVAILABLE'));
+      setTables(allTables.filter(t => t.status === 'OCCUPIED'));
       setMenuItems(menuData || []);
     } catch (err) {
       console.error('Failed to fetch data', err);
       setError('Không thể tải danh sách bàn và thực đơn.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectTable = async (tableId: number) => {
+    setSelectedTable(tableId);
+    setActiveSession(null);
+    setSessionError(null);
+    setIsLoading(true);
+    try {
+      const session = await tableSessionService.getActiveSessionByTable(tableId);
+      if (session && session.status === 'ACTIVE') {
+        setActiveSession(session);
+      } else {
+        setSessionError('Bàn không có phiên hoạt động (ACTIVE).');
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi lấy phiên bàn:', err);
+      setSessionError('Không tìm thấy phiên bàn đang hoạt động.');
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +81,7 @@ const StaffCreateOrder = () => {
       if (existing) {
         return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, { ...item, quantity: 1, note: '' }];
     });
   };
 
@@ -69,6 +95,10 @@ const StaffCreateOrder = () => {
     }).filter(item => item.quantity > 0));
   };
 
+  const updateItemNote = (id: number, note: string) => {
+    setCart(prev => prev.map(item => item.id === id ? { ...item, note } : item));
+  };
+
   const removeFromCart = (id: number) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
@@ -76,8 +106,8 @@ const StaffCreateOrder = () => {
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleCreateOrder = async () => {
-    if (!selectedTable) {
-      alert("Vui lòng chọn một bàn.");
+    if (!activeSession) {
+      alert("Bàn này chưa có phiên hoạt động.");
       return;
     }
     if (cart.length === 0) {
@@ -88,12 +118,12 @@ const StaffCreateOrder = () => {
     setIsSubmitting(true);
     try {
       await orderService.createOrder({
-        table_id: selectedTable,
-        order_type: "STAFF",
+        table_session_id: activeSession.id,
+        note: orderNote,
         items: cart.map(item => ({
           menu_item_id: item.id,
           quantity: item.quantity,
-          note: ""
+          note: item.note
         }))
       });
       alert("Tạo đơn hàng thành công!");
@@ -127,12 +157,15 @@ const StaffCreateOrder = () => {
           
           {/* Table Selection */}
           <div className="p-4 bg-white border-b">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">1. Chọn Bàn</h2>
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">1. Chọn Bàn (Đang phục vụ)</h2>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {tables.length === 0 && !isLoading && (
+                <p className="text-gray-500 text-sm">Không có bàn nào đang hoạt động (OCCUPIED).</p>
+              )}
               {tables.map(table => (
                 <button
                   key={table.id}
-                  onClick={() => setSelectedTable(table.id)}
+                  onClick={() => handleSelectTable(table.id)}
                   className={`flex flex-col items-center justify-center min-w-[80px] h-20 rounded-xl border-2 transition-all ${
                     selectedTable === table.id 
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md transform scale-105' 
@@ -144,6 +177,17 @@ const StaffCreateOrder = () => {
                 </button>
               ))}
             </div>
+            
+            {selectedTable && activeSession && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                <strong>Phiên hoạt động:</strong> #{activeSession.id} (Bắt đầu: {new Date(activeSession.started_at).toLocaleString()})
+              </div>
+            )}
+            {selectedTable && sessionError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                {sessionError}
+              </div>
+            )}
           </div>
 
           {/* Menu Selection */}
@@ -162,7 +206,7 @@ const StaffCreateOrder = () => {
               </div>
             </div>
 
-            {isLoading ? (
+            {isLoading && !tables.length ? (
               <div className="flex justify-center items-center h-40">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
               </div>
@@ -173,12 +217,12 @@ const StaffCreateOrder = () => {
                 {filteredMenu.map(item => (
                   <div 
                     key={item.id} 
-                    onClick={() => addToCart(item)}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all group"
+                    onClick={() => activeSession ? addToCart(item) : alert('Vui lòng chọn bàn có phiên hoạt động trước')}
+                    className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all group ${activeSession ? 'cursor-pointer hover:shadow-md hover:border-indigo-300' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <div className="h-32 bg-gray-100 relative overflow-hidden">
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={item.image} alt={item.name} className={`w-full h-full object-cover transition-transform duration-300 ${activeSession ? 'group-hover:scale-105' : ''}`} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">Không có ảnh</div>
                       )}
@@ -210,28 +254,48 @@ const StaffCreateOrder = () => {
             ) : (
               <div className="space-y-4">
                 {cart.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-white border rounded-xl shadow-sm">
-                    <div className="flex-1 pr-3">
-                      <h4 className="font-medium text-gray-800 line-clamp-1 text-sm">{item.name}</h4>
-                      <p className="text-indigo-600 font-semibold text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(item.price))}</p>
+                  <div key={item.id} className="flex flex-col p-3 bg-white border rounded-xl shadow-sm gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 pr-3">
+                        <h4 className="font-medium text-gray-800 line-clamp-1 text-sm">{item.name}</h4>
+                        <p className="text-indigo-600 font-semibold text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(item.price))}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-4 text-center font-medium text-sm">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 hover:bg-indigo-200 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="w-4 text-center font-medium text-sm">{item.quantity}</span>
-                      <button 
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 hover:bg-indigo-200 transition-colors"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ghi chú (vd: ít cay, không hành...)"
+                      value={item.note || ''}
+                      onChange={(e) => updateItemNote(item.id, e.target.value)}
+                      className="w-full text-xs p-2 border border-gray-200 rounded-md focus:border-indigo-400 focus:outline-none"
+                    />
                   </div>
                 ))}
+                
+                <div className="pt-3 border-t border-gray-100">
+                  <label className="text-xs font-semibold text-gray-600 uppercase">Ghi chú chung cho đơn:</label>
+                  <textarea
+                    value={orderNote}
+                    onChange={(e) => setOrderNote(e.target.value)}
+                    placeholder="Mang món ra cùng nhau..."
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    rows={2}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -243,17 +307,17 @@ const StaffCreateOrder = () => {
             </div>
             <button
               onClick={handleCreateOrder}
-              disabled={isSubmitting || cart.length === 0 || !selectedTable}
+              disabled={isSubmitting || cart.length === 0 || !activeSession}
               className={`w-full py-3 px-4 rounded-xl font-bold text-white shadow-lg transition-all transform ${
-                isSubmitting || cart.length === 0 || !selectedTable 
+                isSubmitting || cart.length === 0 || !activeSession 
                   ? 'bg-gray-400 cursor-not-allowed opacity-70' 
                   : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-500/30 active:scale-95'
               }`}
             >
               {isSubmitting ? 'Đang tạo...' : 'Tạo Đơn Hàng'}
             </button>
-            {!selectedTable && (
-              <p className="text-red-500 text-xs text-center mt-2 font-medium">Vui lòng chọn bàn để tiếp tục.</p>
+            {!activeSession && selectedTable && (
+              <p className="text-red-500 text-xs text-center mt-2 font-medium">Bàn này chưa có phiên hoạt động hợp lệ.</p>
             )}
           </div>
         </div>

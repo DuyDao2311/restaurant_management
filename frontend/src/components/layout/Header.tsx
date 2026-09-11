@@ -70,7 +70,14 @@ const Header = () => {
               </Link>
             )}
             <Link
-              to="/booking"
+              to="/#booking"
+              onClick={(e) => {
+                if (location.pathname === '/') {
+                  e.preventDefault();
+                  document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
+                  window.history.pushState(null, '', '/#booking');
+                }
+              }}
               className="hidden sm:inline-flex bg-[#111] text-white px-6 py-3.5 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors items-center justify-center rounded-sm"
             >
               Đặt bàn ngay

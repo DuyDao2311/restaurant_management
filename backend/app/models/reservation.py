@@ -9,7 +9,7 @@ class Reservation(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    table_id = Column(Integer, ForeignKey("restaurant_tables.id"), nullable=False)
+    table_id = Column(Integer, ForeignKey("restaurant_tables.id"), nullable=True)
     reservation_code = Column(String(50), unique=True, nullable=False)
     reservation_date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False)
@@ -18,8 +18,9 @@ class Reservation(Base):
     customer_name = Column(String(100), nullable=False)
     customer_phone = Column(String(20), nullable=False)
     note = Column(Text, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
     status = Column(
-        Enum("PENDING", "CONFIRMED", "CHECKED_IN", "CANCELLED", "COMPLETED", "NO_SHOW"),
+        Enum("PENDING", "CONFIRMED", "CHECKED_IN", "CANCELLED", "COMPLETED", "NO_SHOW", "REJECTED"),
         nullable=False
     )
     created_at = Column(DateTime)
@@ -28,4 +29,4 @@ class Reservation(Base):
     # Relationships
     user = relationship("User", back_populates="reservations")
     table = relationship("RestaurantTable", back_populates="reservations")
-    orders = relationship("Order", back_populates="reservation")
+    table_session = relationship("TableSession", back_populates="reservation", uselist=False, cascade="all, delete-orphan")

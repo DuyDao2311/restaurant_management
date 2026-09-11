@@ -31,6 +31,7 @@ import StaffDashboardPage from './pages/staff/Dashboard/StaffDashboard';
 import StaffTablesPage from './pages/staff/Tables/StaffTables';
 import StaffOrdersPage from './pages/staff/Orders/StaffOrders';
 import StaffCreateOrderPage from './pages/staff/Orders/StaffCreateOrder';
+import StaffReservationsPage from './pages/staff/Reservations/Reservations';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
               <Route index element={<Navigate to="/staff/dashboard" replace />} />
               <Route path="dashboard" element={<StaffDashboardPage />} />
               <Route path="tables" element={<StaffTablesPage />} />
+              <Route path="reservations" element={<StaffReservationsPage />} />
               <Route path="orders" element={<StaffOrdersPage />} />
               <Route path="orders/create" element={<StaffCreateOrderPage />} />
             </Route>

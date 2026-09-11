@@ -161,7 +161,7 @@ const OrdersPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm font-medium border border-gray-200">
-                        Bàn {order.table_id}
+                        Session #{order.table_session_id}
                       </span>
                     </td>
                     <td className="px-6 py-4">

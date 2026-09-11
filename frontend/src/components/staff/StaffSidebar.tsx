@@ -5,6 +5,7 @@ import {
   ShoppingCart,
   X,
   LogOut,
+  Calendar,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
@@ -36,6 +37,7 @@ const navSections: NavSection[] = [
     title: 'OPERATIONS',
     items: [
       { label: 'Tables', path: '/staff/tables', icon: Table },
+      { label: 'Reservations', path: '/staff/reservations', icon: Calendar },
       { label: 'Orders', path: '/staff/orders', icon: ShoppingCart },
     ],
   },

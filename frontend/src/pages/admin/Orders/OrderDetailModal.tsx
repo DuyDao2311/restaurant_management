@@ -26,6 +26,20 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy Order này?")) return;
+    setIsUpdating(true);
+    try {
+      const updated = await orderService.cancelOrder(order.id);
+      onStatusUpdated(updated);
+      alert("Hủy Order thành công");
+    } catch (error: any) {
+      alert(error?.response?.data?.detail || "Hủy Order thất bại");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -52,6 +66,8 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
     }
   };
 
+  const canCancel = ['PENDING', 'CONFIRMED', 'PREPARING'].includes(order.status);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden m-4">
@@ -67,8 +83,7 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
             </div>
             <div className="flex items-center text-gray-500 text-sm gap-4">
               <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {new Date(order.created_at || '').toLocaleString()}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Bàn {order.table_id}</span>
-              <span className="flex items-center gap-1.5"><Package className="w-4 h-4" /> {order.order_type}</span>
+              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Session #{order.table_session_id}</span>
             </div>
           </div>
           <button
@@ -81,7 +96,7 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-white">
-          <div className="flex justify-between items-center mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Thay đổi Trạng thái</p>
               <div className="flex flex-wrap gap-2">
@@ -100,6 +115,15 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
                 ))}
               </div>
             </div>
+            {canCancel && (
+              <button
+                onClick={handleCancelOrder}
+                disabled={isUpdating}
+                className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Hủy Order
+              </button>
+            )}
           </div>
 
           <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -148,10 +172,10 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
               <span>Tạm tính</span>
               <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.subtotal))}</span>
             </div>
-            {Number(order.discount) > 0 && (
+            {Number(order.discount_amount) > 0 && (
               <div className="flex justify-between items-center mb-2 text-sm text-green-600">
                 <span>Giảm giá</span>
-                <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.discount))}</span>
+                <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.discount_amount))}</span>
               </div>
             )}
             <div className="flex justify-between items-center pt-3 border-t border-gray-200 mt-2">

@@ -367,3 +367,24 @@ def get_table_qr(
             "status": qr_code.status
         }
     }
+
+# ---------- GET /api/tables/{table_id}/session ----------
+@router.get("/{table_id}/session")
+def api_get_table_session(
+    table_id: int,
+    current_user=Depends(require_admin_or_staff),
+    db: Session = Depends(get_db),
+):
+    """
+    Get ACTIVE session for a table. Requires: ADMIN or STAFF.
+    """
+    from app.services.table_session_service import get_active_session_by_table
+    from app.schemas.table_session import TableSessionResponse
+
+    session = get_active_session_by_table(db, table_id)
+    return {
+        "success": True,
+        "message": "Success",
+        "data": TableSessionResponse.model_validate(session).model_dump()
+    }
+

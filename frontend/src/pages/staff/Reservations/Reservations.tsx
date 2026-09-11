@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { adminReservationService } from '../../../services/adminReservationService';
+import { staffReservationService } from '../../../services/staffReservationService';
 import { Reservation, ReservationStatus } from '../../../types/reservation';
-import { Search, Filter, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Filter, Eye, CheckCircle, XCircle, UserCheck } from 'lucide-react';
 import AssignTableModal from './AssignTableModal';
 import RejectReservationModal from './RejectReservationModal';
 import ReservationDetailModal from './ReservationDetailModal';
@@ -26,7 +26,7 @@ const Reservations: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const data = await adminReservationService.getReservations({
+      const data = await staffReservationService.getReservations({
         page,
         size: 10,
         status: statusFilter || undefined,
@@ -55,6 +55,18 @@ const Reservations: React.FC = () => {
   const openModal = (reservation: Reservation, type: 'DETAIL' | 'ASSIGN' | 'REJECT') => {
     setSelectedReservation(reservation);
     setModalType(type);
+  };
+
+  const handleCheckIn = async (reservation: Reservation) => {
+    if (!window.confirm(`Xác nhận Check-in cho đơn đặt bàn ${reservation.reservation_code}?`)) return;
+    
+    try {
+      await staffReservationService.checkInReservation(reservation.id);
+      // Fetch again to update table status
+      fetchReservations();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Lỗi khi Check-in');
+    }
   };
 
   const getStatusColor = (status: ReservationStatus) => {
@@ -207,6 +219,15 @@ const Reservations: React.FC = () => {
                               <XCircle size={18} />
                             </button>
                           </>
+                        )}
+                        {res.status === 'CONFIRMED' && (
+                          <button
+                            onClick={() => handleCheckIn(res)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Check-in (Khách đến)"
+                          >
+                            <UserCheck size={18} />
+                          </button>
                         )}
                       </div>
                     </td>

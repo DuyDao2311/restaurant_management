@@ -25,8 +25,7 @@ class OrderItemResponse(OrderItemBase):
 
 # Base Order
 class OrderBase(BaseModel):
-    table_id: int
-    order_type: str = "STAFF"
+    table_session_id: int
     note: Optional[str] = None
 
 class OrderCreate(OrderBase):
@@ -35,11 +34,9 @@ class OrderCreate(OrderBase):
 class OrderResponse(OrderBase):
     id: int
     order_code: str
-    user_id: Optional[int] = None
     status: str
     subtotal: Decimal
-    discount: Optional[Decimal] = None
-    tax: Optional[Decimal] = None
+    discount_amount: Optional[Decimal] = None
     total_amount: Decimal
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

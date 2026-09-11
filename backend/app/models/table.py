@@ -23,3 +23,4 @@ class RestaurantTable(Base):
     qr_codes = relationship("TableQRCode", back_populates="table", cascade="all, delete-orphan")
     reservations = relationship("Reservation", back_populates="table")
     orders = relationship("Order", back_populates="table")
+    table_sessions = relationship("TableSession", back_populates="table", cascade="all, delete-orphan")

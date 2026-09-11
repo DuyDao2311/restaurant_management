@@ -14,13 +14,10 @@ export interface OrderItem {
 export interface Order {
   id: number;
   order_code: string;
-  user_id?: number;
-  table_id: number;
-  order_type: string;
+  table_session_id: number;
   status: string;
   subtotal: number;
-  discount?: number;
-  tax?: number;
+  discount_amount?: number;
   total_amount: number;
   note?: string;
   created_at?: string;
@@ -35,8 +32,7 @@ export interface OrderItemCreate {
 }
 
 export interface OrderCreate {
-  table_id: number;
-  order_type?: string;
+  table_session_id: number;
   note?: string;
   items: OrderItemCreate[];
 }
