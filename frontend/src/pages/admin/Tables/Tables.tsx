@@ -4,12 +4,14 @@ import axios from 'axios';
 import { Search, ChevronDown, RefreshCw, Plus, MoreVertical, Trash2, Pencil, CheckCircle2, AlertCircle, QrCode } from 'lucide-react';
 import { tableService } from '../../../services/tableService';
 import { RestaurantTable } from '../../../types/table';
+import { Pagination } from '../../../types';
 import TableStatusBadge from './TableStatusBadge';
 import TableForm from './TableForm';
 
 const TablesPage = () => {
   const navigate = useNavigate();
   const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,12 +42,17 @@ const TablesPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await tableService.getTables({
-        search: searchQuery || undefined,
-        status: statusFilter || undefined,
-      });
+      const response = await tableService.getTables(
+        pagination.page,
+        pagination.limit,
+        {
+          search: searchQuery || undefined,
+          status: statusFilter || undefined,
+        }
+      );
       if (response.success) {
-        setTables(response.data || []);
+        setTables(response.data.items || []);
+        setPagination(response.data.pagination);
       } else {
         setError('Không thể tải danh sách bàn.');
       }
@@ -63,7 +70,13 @@ const TablesPage = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, pagination.page]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.total_pages) {
+      setPagination((prev) => ({ ...prev, page: newPage }));
+    }
+  };
 
   const handleOpenCreateForm = () => {
     setFormMode('create');
@@ -278,27 +291,47 @@ const TablesPage = () => {
           </table>
         </div>
 
-        {/* Pagination - Dummy for now as API doesn't support pagination yet */}
-        <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between mt-auto">
-          <div>
-            <p className="text-sm text-gray-600 uppercase tracking-wider">
-              HIỂN THỊ <span className="font-medium">{tables.length > 0 ? 1 : 0}</span> - <span className="font-medium">{tables.length}</span> TRÊN TỔNG SỐ <span className="font-medium">{tables.length}</span> BÀN
-            </p>
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between mt-auto">
+            <div>
+              <p className="text-sm text-gray-600 uppercase tracking-wider">
+                HIỂN THỊ <span className="font-medium">{tables.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> TRÊN TỔNG SỐ <span className="font-medium">{pagination.total}</span> BÀN
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <span>&lt; Trước</span>
+                </button>
+                {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      p === pagination.page
+                        ? 'z-10 bg-black text-white border-black'
+                        : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.total_pages}
+                  className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <span>Sau &gt;</span>
+                </button>
+              </nav>
+            </div>
           </div>
-          <div>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button disabled className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-400">
-                <span>&lt; Trước</span>
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 border text-sm font-medium z-10 bg-black text-white border-black">
-                1
-              </button>
-              <button disabled className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-400">
-                <span>Sau &gt;</span>
-              </button>
-            </nav>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Table Form Modal */}

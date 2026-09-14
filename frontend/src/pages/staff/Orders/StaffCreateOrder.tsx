@@ -36,11 +36,11 @@ const StaffCreateOrder = () => {
     setIsLoading(true);
     try {
       const [tablesData, menuData] = await Promise.all([
-        tableService.getTables(),
+        tableService.getTables(1, 100),
         menuService.getAllMenuItems()
       ]);
       // Staff should only order for OCCUPIED tables which have an ACTIVE session
-      const allTables = tablesData.data || [];
+      const allTables = tablesData.success ? tablesData.data.items : [];
       setTables(allTables.filter(t => t.status === 'OCCUPIED'));
       setMenuItems(menuData || []);
     } catch (err) {

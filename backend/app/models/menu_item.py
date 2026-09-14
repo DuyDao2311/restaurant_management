@@ -26,3 +26,7 @@ class MenuItem(Base):
     # Relationships
     category = relationship("Category", back_populates="menu_items")
     order_items = relationship("OrderItem", back_populates="menu_item")
+
+    @property
+    def category_name(self):
+        return self.category.name if self.category else None

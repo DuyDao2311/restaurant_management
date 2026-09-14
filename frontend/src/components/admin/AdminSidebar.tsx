@@ -91,60 +91,70 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 flex flex-col
+          fixed top-0 left-0 z-50 h-full w-64 bg-[#111111] flex flex-col
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         {/* Logo / Brand */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🍽️</span>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-gray-900">Restaurant</p>
-              <p className="text-xs text-gray-500">Management</p>
+        <div className="pt-8 pb-6 px-6 border-b border-[#222]">
+          <div className="flex items-center gap-4 mb-1">
+            <div className="w-10 h-10 rounded-full border border-[#D4AF37] flex items-center justify-center text-[#D4AF37]">
+              <Utensils size={18} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-serif text-white tracking-widest leading-none">RESTAURANT</h1>
+              <p className="text-[9px] text-gray-400 font-medium tracking-widest uppercase mt-1.5">GASTRONOMIE ADMIN</p>
             </div>
           </div>
 
           {/* Close button (mobile only) */}
           <button
             onClick={onClose}
-            className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="absolute top-4 right-4 lg:hidden p-1 rounded-md text-gray-400 hover:text-white transition-colors"
           >
             <X size={20} />
           </button>
         </div>
 
+        {/* Service Mode Button (Decorative matching design) */}
+        {/* <div className="px-6 pt-6 pb-2">
+           <div className="border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 cursor-pointer transition-colors rounded-sm py-2.5 flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></div>
+              <span className="text-[10px] font-bold text-[#D4AF37] tracking-widest uppercase">SERVICE MODE</span>
+           </div>
+        </div> */}
+
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3">
-          {navSections.map((section) => (
-            <div key={section.title} className="mb-6">
-              <p className="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                {section.title}
-              </p>
+        <nav className="flex-1 overflow-y-auto py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {navSections.map((section, idx) => (
+            <div key={section.title} className={idx > 0 ? "mt-4" : ""}>
               <ul className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
+                  const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
 
                   return (
-                    <li key={item.path}>
+                    <li key={item.path} className="relative">
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-[2px] bg-[#D4AF37]" />
+                      )}
                       <NavLink
                         to={item.path}
                         onClick={handleNavClick}
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                          flex items-center gap-4 px-6 py-3 text-[11px] font-bold uppercase tracking-widest
                           transition-colors duration-150
                           ${isActive
-                            ? 'bg-amber-50 text-amber-700'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'text-[#D4AF37]'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                           }
                         `}
                       >
                         <Icon
-                          size={18}
-                          className={isActive ? 'text-amber-600' : 'text-gray-400'}
+                          size={16}
+                          className={isActive ? 'text-[#D4AF37]' : 'text-gray-500'}
                         />
                         {item.label}
                       </NavLink>
@@ -157,13 +167,13 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         </nav>
 
         {/* Footer with Logout */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-6 border-t border-[#222]">
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors focus:outline-none"
+            className="flex w-full items-center gap-4 text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-[#D4AF37] transition-colors focus:outline-none"
           >
-            <LogOut size={18} />
-            Đăng xuất
+            <LogOut size={16} className="text-gray-500 group-hover:text-[#D4AF37]" />
+            Log Out
           </button>
         </div>
       </aside>

@@ -1,5 +1,6 @@
 import api from './api';
-import { Order, OrderCreate, OrderListResponse, OrderStatusUpdate } from '../types/order.types';
+import { Order, OrderCreate, OrderStatusUpdate } from '../types/order.types';
+import { PaginatedResponse } from '../types';
 
 export const orderService = {
   createOrder: async (data: OrderCreate): Promise<Order> => {
@@ -9,14 +10,14 @@ export const orderService = {
 
   getOrders: async (
     page: number = 1,
-    size: number = 10,
+    limit: number = 10,
     status?: string,
     orderCode?: string,
     tableSessionId?: number
-  ): Promise<OrderListResponse> => {
+  ): Promise<PaginatedResponse<Order>> => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
-    params.append('size', size.toString());
+    params.append('limit', limit.toString());
 
     if (status) params.append('status', status);
     if (orderCode) params.append('order_code', orderCode);

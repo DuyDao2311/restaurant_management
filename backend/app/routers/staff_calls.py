@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List, Optional
 from datetime import datetime
+import math
 
 from app.core.database import get_db
 from app.models.staff_call import StaffCall
@@ -51,17 +52,17 @@ def create_staff_call(
     
     return new_call
 
-@router.get("/", response_model=StaffCallListResponse)
+@router.get("/", response_model=None)
 def get_staff_calls(
     page: int = Query(1, ge=1),
-    size: int = Query(50, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=100),
     status: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     if current_user.role.name not in ["ADMIN", "STAFF"]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Not authorized to view staff calls"
         )
         
@@ -71,13 +72,21 @@ def get_staff_calls(
         query = query.filter(StaffCall.status == status)
         
     total = query.count()
-    calls = query.order_by(desc(StaffCall.created_at)).offset((page - 1) * size).limit(size).all()
+    calls = query.order_by(desc(StaffCall.created_at)).offset((page - 1) * limit).limit(limit).all()
+    total_pages = math.ceil(total / limit) if limit else 0
     
     return {
-        "items": calls,
-        "total": total,
-        "page": page,
-        "size": size
+        "success": True,
+        "message": "Success",
+        "data": {
+            "items": [StaffCallResponse.model_validate(c).model_dump() for c in calls],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": total_pages
+            }
+        }
     }
 
 @router.patch("/{call_id}/status", response_model=StaffCallResponse)

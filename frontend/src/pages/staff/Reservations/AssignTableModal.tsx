@@ -22,10 +22,11 @@ const AssignTableModal: React.FC<AssignTableModalProps> = ({ reservation, onClos
     // Fetch tables to assign, you might want to fetch available tables only
     const fetchTables = async () => {
       try {
-        // Fetching all tables, let admin decide or backend validate
-        const responseData = await tableService.getTables({ size: 100 } as any);
+        const responseData = await tableService.getTables(1, 100);
         // Only show tables that have capacity >= guests
-        setTables(responseData.data.filter((t: RestaurantTable) => t.capacity >= reservation.number_of_guests && t.status !== 'MAINTENANCE'));
+        if (responseData.success) {
+          setTables(responseData.data.items.filter((t: RestaurantTable) => t.capacity >= reservation.number_of_guests && t.status !== 'MAINTENANCE'));
+        }
       } catch (err) {
         console.error("Failed to fetch tables", err);
       }

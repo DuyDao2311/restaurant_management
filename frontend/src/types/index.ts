@@ -1,3 +1,19 @@
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean;
+  message: string;
+  data: {
+    items: T[];
+    pagination: Pagination;
+  };
+}
+
 // ==================== User ====================
 
 export interface User {

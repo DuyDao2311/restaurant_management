@@ -1,15 +1,14 @@
-from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from fastapi import HTTPException
 
 from app.core.database import get_db
-from app.models.category import Category
-from app.models.menu_item import MenuItem
-from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
-from app.dependencies.auth import get_current_user, require_admin_or_staff
+from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryStatusUpdate
+from app.dependencies.auth import require_admin
+from app.services import category_service
 
 router = APIRouter()
 
@@ -17,20 +16,33 @@ router = APIRouter()
 # ---------- GET /api/categories ----------
 @router.get("")
 def get_categories(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """Get all categories. Public endpoint."""
+    """Get all categories with optional pagination and search. Public endpoint."""
     try:
-        categories = db.query(Category).all()
+        items, total, total_pages = category_service.get_categories(
+            db=db, search=search, page=page, limit=limit
+        )
         return {
             "success": True,
             "message": "Success",
-            "data": [CategoryResponse.model_validate(c).model_dump() for c in categories]
+            "data": {
+                "items": [CategoryResponse.model_validate(c).model_dump() for c in items],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "total_pages": total_pages
+                }
+            }
         }
-    except SQLAlchemyError:
+    except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "message": "Database error occurred"}
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
         )
 
 
@@ -41,65 +53,49 @@ def get_category(
     db: Session = Depends(get_db),
 ):
     """Get a category by ID. Public endpoint."""
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
+    try:
+        category = category_service.get_category_by_id(db, category_id)
+        return {
+            "success": True,
+            "message": "Success",
+            "data": CategoryResponse.model_validate(category).model_dump()
+        }
+    except HTTPException as e:
         return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"success": False, "message": "Category not found"}
+            status_code=e.status_code,
+            content={"success": False, "message": e.detail}
         )
-    return {
-        "success": True,
-        "message": "Success",
-        "data": CategoryResponse.model_validate(category).model_dump()
-    }
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
+        )
 
 
 # ---------- POST /api/categories ----------
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_category(
     category_data: CategoryCreate,
-    current_user=Depends(require_admin_or_staff),
+    current_user=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """Create a new category. Requires: ADMIN or STAFF."""
-    # Check duplicate name
-    existing = db.query(Category).filter(Category.name == category_data.name).first()
-    if existing:
-        return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"success": False, "message": f"Category with name '{category_data.name}' already exists"}
-        )
-
+    """Create a new category. Requires: ADMIN."""
     try:
-        now = datetime.now()
-        new_category = Category(
-            name=category_data.name,
-            description=category_data.description,
-            image=category_data.image,
-            status=category_data.status,
-            created_at=now,
-            updated_at=now
-        )
-        db.add(new_category)
-        db.commit()
-        db.refresh(new_category)
-
+        new_category = category_service.create_category(db, category_data)
         return {
             "success": True,
             "message": "Category created successfully",
             "data": CategoryResponse.model_validate(new_category).model_dump()
         }
-    except IntegrityError:
-        db.rollback()
+    except HTTPException as e:
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"success": False, "message": "Category with this name already exists"}
+            status_code=e.status_code,
+            content={"success": False, "message": e.detail}
         )
-    except SQLAlchemyError:
-        db.rollback()
+    except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "message": "Database error occurred"}
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
         )
 
 
@@ -108,58 +104,55 @@ def create_category(
 def update_category(
     category_id: int,
     category_data: CategoryUpdate,
-    current_user=Depends(require_admin_or_staff),
+    current_user=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """Update a category. Requires: ADMIN or STAFF."""
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"success": False, "message": "Category not found"}
-        )
-
-    # Check duplicate name if being updated
-    if category_data.name is not None:
-        existing = db.query(Category).filter(
-            Category.name == category_data.name, Category.id != category_id
-        ).first()
-        if existing:
-            return JSONResponse(
-                status_code=status.HTTP_409_CONFLICT,
-                content={"success": False, "message": f"Category with name '{category_data.name}' already exists"}
-            )
-
+    """Update a category. Requires: ADMIN."""
     try:
-        if category_data.name is not None:
-            category.name = category_data.name
-        if category_data.description is not None:
-            category.description = category_data.description
-        if category_data.image is not None:
-            category.image = category_data.image
-        if category_data.status is not None:
-            category.status = category_data.status
-
-        category.updated_at = datetime.now()
-        db.commit()
-        db.refresh(category)
-
+        updated_category = category_service.update_category(db, category_id, category_data)
         return {
             "success": True,
             "message": "Category updated successfully",
-            "data": CategoryResponse.model_validate(category).model_dump()
+            "data": CategoryResponse.model_validate(updated_category).model_dump()
         }
-    except IntegrityError:
-        db.rollback()
+    except HTTPException as e:
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={"success": False, "message": "Category with this name already exists"}
+            status_code=e.status_code,
+            content={"success": False, "message": e.detail}
         )
-    except SQLAlchemyError:
-        db.rollback()
+    except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "message": "Database error occurred"}
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
+        )
+
+
+# ---------- PATCH /api/categories/{id}/status ----------
+@router.patch("/{category_id}/status")
+def update_category_status(
+    category_id: int,
+    status_data: CategoryStatusUpdate,
+    current_user=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Update status of a category. Requires: ADMIN."""
+    try:
+        updated_category = category_service.update_category_status(db, category_id, status_data)
+        msg = "Mở khóa Category thành công" if status_data.status == "ACTIVE" else "Khóa Category thành công"
+        return {
+            "success": True,
+            "message": msg,
+            "data": CategoryResponse.model_validate(updated_category).model_dump()
+        }
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"success": False, "message": e.detail}
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
         )
 
 
@@ -167,38 +160,23 @@ def update_category(
 @router.delete("/{category_id}")
 def delete_category(
     category_id: int,
-    current_user=Depends(require_admin_or_staff),
+    current_user=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """Delete a category. Requires: ADMIN or STAFF."""
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"success": False, "message": "Category not found"}
-        )
-
-    # Check if category has menu items
-    menu_item_count = db.query(MenuItem).filter(MenuItem.category_id == category_id).count()
-    if menu_item_count > 0:
-        return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
-            content={
-                "success": False,
-                "message": f"Cannot delete this category because it has {menu_item_count} menu item(s)"
-            }
-        )
-
+    """Delete a category. Requires: ADMIN."""
     try:
-        db.delete(category)
-        db.commit()
+        category_service.delete_category(db, category_id)
         return {
             "success": True,
             "message": "Category deleted successfully"
         }
-    except SQLAlchemyError:
-        db.rollback()
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"success": False, "message": e.detail}
+        )
+    except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"success": False, "message": "Database error occurred"}
+            content={"success": False, "message": f"Database error occurred: {str(e)}"}
         )

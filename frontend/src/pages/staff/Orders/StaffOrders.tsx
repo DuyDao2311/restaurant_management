@@ -27,15 +27,17 @@ const StaffOrders = () => {
   const fetchTables = async () => {
     setIsLoading(true);
     try {
-      const response = await tableService.getTables();
-      const allTables = response.data || [];
-      // Show OCCUPIED tables first, then others
-      const sorted = [...allTables].sort((a, b) => {
-        if (a.status === 'OCCUPIED' && b.status !== 'OCCUPIED') return -1;
-        if (a.status !== 'OCCUPIED' && b.status === 'OCCUPIED') return 1;
-        return 0;
-      });
-      setTables(sorted);
+      const response = await tableService.getTables(1, 100);
+      if (response.success) {
+        const allTables = response.data.items || [];
+        // Show OCCUPIED tables first, then others
+        const sorted = [...allTables].sort((a, b) => {
+          if (a.status === 'OCCUPIED' && b.status !== 'OCCUPIED') return -1;
+          if (a.status !== 'OCCUPIED' && b.status === 'OCCUPIED') return 1;
+          return 0;
+        });
+        setTables(sorted);
+      }
     } catch (error) {
       console.error('Failed to fetch tables:', error);
     } finally {
@@ -214,7 +216,7 @@ const StaffOrders = () => {
                         {activeSession.reservation ? (
                           <>
                             <p><span className="font-medium text-gray-800">Khách:</span> {activeSession.reservation.customer_name}</p>
-                            <p><span className="font-medium text-gray-800">Số khách:</span> {activeSession.reservation.guest_count} người</p>
+                            <p><span className="font-medium text-gray-800">Số khách:</span> {activeSession.reservation.number_of_guests} người</p>
                           </>
                         ) : (
                           <>

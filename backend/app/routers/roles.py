@@ -1,6 +1,6 @@
+import math
 from datetime import datetime
-
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -14,19 +14,33 @@ from app.dependencies.auth import require_admin
 router = APIRouter()
 
 
-# ---------- GET /api/roles ----------
 @router.get("")
 def get_roles(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     current_user=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Get all roles. Requires: ADMIN."""
     try:
-        roles = db.query(Role).all()
+        query = db.query(Role)
+        total = query.count()
+        offset = (page - 1) * limit
+        roles = query.offset(offset).limit(limit).all()
+        total_pages = math.ceil(total / limit) if limit else 0
+
         return {
             "success": True,
             "message": "Success",
-            "data": [RoleResponse.model_validate(r).model_dump() for r in roles]
+            "data": {
+                "items": [RoleResponse.model_validate(r).model_dump() for r in roles],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "total_pages": total_pages
+                }
+            }
         }
     except SQLAlchemyError:
         return JSONResponse(

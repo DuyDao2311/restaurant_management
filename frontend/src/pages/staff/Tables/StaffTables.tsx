@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { tableService } from '../../../services/tableService';
 import { RestaurantTable } from '../../../types/table';
+import { Pagination } from '../../../types';
+import { tableService } from '../../../services/tableService';
 import StaffTableCard from './StaffTableCard';
 import StaffTableDetailModal from './StaffTableDetailModal';
 import UpdateTableStatusModal from './UpdateTableStatusModal';
 
 const StaffTables = () => {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,12 +34,17 @@ const StaffTables = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await tableService.getTables({
-        search: searchQuery || undefined,
-        status: statusFilter || undefined,
-      });
+      const response = await tableService.getTables(
+        pagination.page,
+        pagination.limit,
+        {
+          search: searchQuery || undefined,
+          status: statusFilter || undefined,
+        }
+      );
       if (response.success) {
-        setTables(response.data || []);
+        setTables(response.data.items || []);
+        setPagination(response.data.pagination);
       } else {
         setError('Không thể tải danh sách bàn.');
       }
@@ -55,7 +62,13 @@ const StaffTables = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, pagination.page]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.total_pages) {
+      setPagination((prev) => ({ ...prev, page: newPage }));
+    }
+  };
 
   const handleStatusUpdateSuccess = (message: string) => {
     setSelectedTableForStatus(null);
@@ -201,17 +214,53 @@ const StaffTables = () => {
           )}
         </div>
       ) : (
-        // Data Grid
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {tables.map(table => (
-            <StaffTableCard
-              key={table.id}
-              table={table}
-              onViewDetail={(t) => setSelectedTableForDetail(t)}
-              onUpdateStatus={(t) => setSelectedTableForStatus(t)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Data Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {tables.map(table => (
+              <StaffTableCard
+                key={table.id}
+                table={table}
+                onViewDetail={(t) => setSelectedTableForDetail(t)}
+                onUpdateStatus={(t) => setSelectedTableForStatus(t)}
+              />
+            ))}
+          </div>
+          {/* Pagination */}
+          {pagination.total_pages > 1 && (
+            <div className="mt-6 flex justify-center">
+              <nav className="flex items-center gap-1">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Trước
+                </button>
+                {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`px-3 py-1 text-sm font-medium rounded-md ${
+                      p === pagination.page
+                        ? 'bg-blue-600 text-white border border-blue-600'
+                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.total_pages}
+                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Sau
+                </button>
+              </nav>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modals */}

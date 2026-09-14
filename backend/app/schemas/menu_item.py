@@ -76,6 +76,7 @@ class MenuItemResponse(BaseModel):
 
     id: int
     category_id: int
+    category_name: Optional[str] = None
     code: Optional[str] = None
     name: str
     description: Optional[str] = None
@@ -85,3 +86,15 @@ class MenuItemResponse(BaseModel):
     is_available: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class MenuItemStatusUpdate(BaseModel):
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        allowed = ["ACTIVE", "INACTIVE"]
+        if v not in allowed:
+            raise ValueError(f"Status must be one of: {', '.join(allowed)}")
+        return v

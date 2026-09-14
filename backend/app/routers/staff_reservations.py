@@ -1,3 +1,4 @@
+import math
 from datetime import date
 from typing import Optional
 
@@ -39,13 +40,20 @@ def api_staff_get_reservations(
         limit=limit
     )
 
+    total_pages = math.ceil(total / limit) if limit else 0
+
     return {
         "success": True,
         "message": "Success",
-        "data": [ReservationResponse.model_validate(r).model_dump() for r in reservations],
-        "page": page,
-        "limit": limit,
-        "total": total
+        "data": {
+            "items": [ReservationResponse.model_validate(r).model_dump() for r in reservations],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": total_pages
+            }
+        }
     }
 
 @router.get("/{reservation_id}")

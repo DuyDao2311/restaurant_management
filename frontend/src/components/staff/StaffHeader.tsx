@@ -27,7 +27,9 @@ const StaffHeader = ({ onToggleSidebar }: StaffHeaderProps) => {
   const fetchCalls = async () => {
     try {
       const response = await staffCallService.getCalls(1, 50, 'PENDING');
-      setCalls(response.items || []);
+      if (response.success) {
+        setCalls(response.data.items || []);
+      }
     } catch (error) {
       console.error('Error fetching staff calls:', error);
     }
@@ -35,12 +37,14 @@ const StaffHeader = ({ onToggleSidebar }: StaffHeaderProps) => {
 
   const fetchTables = async () => {
     try {
-      const response = await tableService.getTables();
-      const tableMap: Record<number, string> = {};
-      response.data.forEach((t: RestaurantTable) => {
-        tableMap[t.id] = t.table_number;
-      });
-      setTables(tableMap);
+      const response = await tableService.getTables(1, 100);
+      if (response.success) {
+        const tableMap: Record<number, string> = {};
+        response.data.items.forEach((t: RestaurantTable) => {
+          tableMap[t.id] = t.table_number;
+        });
+        setTables(tableMap);
+      }
     } catch (error) {
       console.error('Error fetching tables:', error);
     }

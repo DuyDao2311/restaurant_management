@@ -1,6 +1,8 @@
 import api from './api';
 import { AxiosResponse } from 'axios';
 
+import { PaginatedResponse } from '../types';
+
 export interface User {
   id: number;
   role_id: number;
@@ -11,15 +13,6 @@ export interface User {
   status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
   created_at?: string;
   updated_at?: string;
-}
-
-interface UsersResponse {
-  success: boolean;
-  message: string;
-  data: User[];
-  page: number;
-  limit: number;
-  total: number;
 }
 
 interface SingleUserResponse {
@@ -34,8 +27,8 @@ export interface UserUpdateData {
 }
 
 const userService = {
-  getUsers: async (page: number = 1, limit: number = 20): Promise<UsersResponse> => {
-    const response: AxiosResponse<UsersResponse> = await api.get('/users', {
+  getUsers: async (page: number = 1, limit: number = 10): Promise<PaginatedResponse<User>> => {
+    const response: AxiosResponse<PaginatedResponse<User>> = await api.get('/users', {
       params: { page, limit }
     });
     return response.data;

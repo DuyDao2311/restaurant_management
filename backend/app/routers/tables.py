@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -25,6 +26,8 @@ router = APIRouter()
 # ---------- GET /api/tables ----------
 @router.get("")
 def get_tables(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     status_filter: Optional[str] = Query(None, alias="status", description="Filter: AVAILABLE, RESERVED, OCCUPIED, MAINTENANCE"),
     location: Optional[str] = Query(None, description="Filter by location"),
     search: Optional[str] = Query(None, description="Search by table_number"),
@@ -44,11 +47,23 @@ def get_tables(
         if search is not None and search.strip():
             query = query.filter(RestaurantTable.table_number.ilike(f"%{search.strip()}%"))
 
-        tables = query.all()
+        total = query.count()
+        offset = (page - 1) * limit
+        tables = query.offset(offset).limit(limit).all()
+        total_pages = math.ceil(total / limit) if limit else 0
+
         return {
             "success": True,
             "message": "Success",
-            "data": [TableResponse.model_validate(t).model_dump() for t in tables]
+            "data": {
+                "items": [TableResponse.model_validate(t).model_dump() for t in tables],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "total_pages": total_pages
+                }
+            }
         }
     except SQLAlchemyError:
         return JSONResponse(

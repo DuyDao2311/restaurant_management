@@ -14,7 +14,7 @@ from app.models import (
 )
 from app.core.database import Base
 
-from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions
+from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions, admin_staff
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -54,6 +54,12 @@ app.include_router(
 )
 
 app.include_router(
+    admin_staff.router,
+    prefix="/api/admin/staff",
+    tags=["Admin Staff"]
+)
+
+app.include_router(
     tables.router,
     prefix="/api/tables",
     tags=["Tables"]
@@ -79,7 +85,7 @@ app.include_router(
 
 app.include_router(
     orders.router,
-    prefix="/api/orders",
+    prefix="/api",
     tags=["Orders"]
 )
 

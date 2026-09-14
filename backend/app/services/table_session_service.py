@@ -75,6 +75,13 @@ def close_table_session(db: Session, session_id: int) -> TableSession:
         table.status = "AVAILABLE"
         table.updated_at = now
 
+    # 5. Update Reservation (if any)
+    if session.reservation_id:
+        reservation = db.query(Reservation).with_for_update().filter(Reservation.id == session.reservation_id).first()
+        if reservation and reservation.status == "CHECKED_IN":
+            reservation.status = "COMPLETED"
+            reservation.updated_at = now
+
     db.commit()
     db.refresh(session)
 

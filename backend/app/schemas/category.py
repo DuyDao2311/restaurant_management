@@ -58,3 +58,15 @@ class CategoryResponse(BaseModel):
     status: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class CategoryStatusUpdate(BaseModel):
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        allowed = ["ACTIVE", "INACTIVE"]
+        if v not in allowed:
+            raise ValueError(f"Status must be one of: {', '.join(allowed)}")
+        return v

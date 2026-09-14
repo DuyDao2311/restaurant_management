@@ -1,7 +1,7 @@
 export interface NestedReservation {
   id: number;
   customer_name: string;
-  guest_count: number;
+  number_of_guests: number;
   customer_phone?: string;
 }
 

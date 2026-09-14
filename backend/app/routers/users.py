@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
@@ -19,7 +20,7 @@ router = APIRouter()
 @router.get("")
 def get_users(
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=100),
     current_user=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
@@ -28,14 +29,20 @@ def get_users(
         offset = (page - 1) * limit
         users = db.query(User).offset(offset).limit(limit).all()
         total = db.query(User).count()
+        total_pages = math.ceil(total / limit) if limit else 0
 
         return {
             "success": True,
             "message": "Success",
-            "data": [UserResponse.model_validate(u).model_dump() for u in users],
-            "page": page,
-            "limit": limit,
-            "total": total
+            "data": {
+                "items": [UserResponse.model_validate(u).model_dump() for u in users],
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "total_pages": total_pages
+                }
+            }
         }
     except SQLAlchemyError:
         return JSONResponse(

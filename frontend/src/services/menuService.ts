@@ -6,7 +6,11 @@ export const menuService = {
   getAllMenuItems: async (): Promise<MenuItem[]> => {
     try {
       const response = await api.get('/menu-items');
-      return response.data.data || response.data;
+      const data = response.data.data;
+      if (data && Array.isArray(data.items)) {
+        return data.items;
+      }
+      return data || response.data || [];
     } catch (error) {
       console.error('Error fetching menu items:', error);
       throw error;

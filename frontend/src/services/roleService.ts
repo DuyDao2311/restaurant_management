@@ -1,6 +1,8 @@
 import api from './api';
 import { AxiosResponse } from 'axios';
 
+import { PaginatedResponse } from '../types';
+
 export interface Role {
   id: number;
   name: string;
@@ -8,15 +10,11 @@ export interface Role {
   created_at?: string;
 }
 
-interface RoleResponse {
-  success: boolean;
-  message: string;
-  data: Role[];
-}
-
 const roleService = {
-  getRoles: async (): Promise<RoleResponse> => {
-    const response: AxiosResponse<RoleResponse> = await api.get('/roles');
+  getRoles: async (page: number = 1, limit: number = 10): Promise<PaginatedResponse<Role>> => {
+    const response: AxiosResponse<PaginatedResponse<Role>> = await api.get('/roles', {
+      params: { page, limit }
+    });
     return response.data;
   },
 };

@@ -3,19 +3,24 @@ import {
   CreateTableRequest,
   UpdateTableRequest,
   TableResponse,
-  TableListResponse,
   TableQRManagementResponse,
   DeleteTableResponse,
   TablePublicQRDataResponse,
+  RestaurantTable,
 } from '../types/table';
+import { PaginatedResponse } from '../types';
 
 export const tableService = {
-  getTables: async (params?: {
-    status?: string;
-    location?: string;
-    search?: string;
-  }): Promise<TableListResponse> => {
-    const response = await api.get('/tables', { params });
+  getTables: async (
+    page: number = 1,
+    limit: number = 10,
+    params?: {
+      status?: string;
+      location?: string;
+      search?: string;
+    }
+  ): Promise<PaginatedResponse<RestaurantTable>> => {
+    const response = await api.get('/tables', { params: { page, limit, ...params } });
     return response.data;
   },
 

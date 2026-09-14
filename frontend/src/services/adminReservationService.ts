@@ -1,31 +1,25 @@
 import api from './api';
 import {
-  Reservation,
-  ReservationListResponse,
   AssignTablePayload,
-  RejectReservationPayload
+  RejectReservationPayload,
+  Reservation
 } from '../types/reservation';
+import { PaginatedResponse } from '../types';
 
 export const adminReservationService = {
-  getReservations: async (params?: {
-    status?: string;
-    reservation_date?: string;
-    table_id?: number;
-    page?: number;
-    size?: number;
-  }): Promise<ReservationListResponse> => {
-    const { size, ...rest } = params || {};
+  getReservations: async (
+    page: number = 1,
+    limit: number = 10,
+    params?: {
+      status?: string;
+      reservation_date?: string;
+      table_id?: number;
+    }
+  ): Promise<PaginatedResponse<Reservation>> => {
     const response = await api.get('/admin/reservations', { 
-      params: { ...rest, limit: size } 
+      params: { page, limit, ...params } 
     });
-    const resData = response.data;
-    return {
-      items: resData.data || [],
-      total: resData.total || 0,
-      page: resData.page || 1,
-      size: resData.limit || 10,
-      pages: Math.ceil((resData.total || 0) / (resData.limit || 10)) || 1
-    };
+    return response.data;
   },
 
   getReservation: async (id: number): Promise<Reservation> => {

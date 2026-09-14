@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, ShoppingCart, Clock, RefreshCw, Eye } from 'lucide-react';
-import { orderService } from '../../../services/orderService';
 import { Order } from '../../../types/order.types';
+import { Pagination } from '../../../types';
+import { orderService } from '../../../services/orderService';
 import OrderDetailModal from './OrderDetailModal';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -13,17 +15,26 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter]);
+  }, [statusFilter, pagination.page]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await orderService.getOrders(1, 100, statusFilter || undefined);
-      setOrders(response.items || []);
+      const response = await orderService.getOrders(pagination.page, pagination.limit, statusFilter || undefined);
+      if (response.success) {
+        setOrders(response.data.items || []);
+        setPagination(response.data.pagination);
+      }
     } catch (error) {
       console.error('Failed to fetch orders:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.total_pages) {
+      setPagination((prev) => ({ ...prev, page: newPage }));
     }
   };
 
@@ -193,6 +204,48 @@ const OrdersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 uppercase tracking-wider">
+                HIỂN THỊ <span className="font-medium">{orders.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> TRÊN TỔNG SỐ <span className="font-medium">{pagination.total}</span> ĐƠN HÀNG
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Trước
+                </button>
+                {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      p === pagination.page
+                        ? 'z-10 bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.total_pages}
+                  className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Sau
+                </button>
+              </nav>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedOrder && (

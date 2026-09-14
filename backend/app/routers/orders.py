@@ -4,6 +4,7 @@ from sqlalchemy import desc
 from typing import List, Optional
 import random
 import string
+import math
 from datetime import datetime
 from decimal import Decimal
 
@@ -145,10 +146,10 @@ def create_order(
     
     return new_order
 
-@router.get("/staff/orders", response_model=OrderListResponse)
+@router.get("/staff/orders")
 def get_orders(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=100),
     status_filter: Optional[str] = Query(None, alias="status"),
     order_code: Optional[str] = None,
     table_session_id: Optional[int] = None,
@@ -165,13 +166,21 @@ def get_orders(
         query = query.filter(Order.table_session_id == table_session_id)
         
     total = query.count()
-    orders = query.order_by(desc(Order.created_at)).offset((page - 1) * size).limit(size).all()
+    orders = query.order_by(desc(Order.created_at)).offset((page - 1) * limit).limit(limit).all()
+    total_pages = math.ceil(total / limit) if limit else 0
     
     return {
-        "items": orders,
-        "total": total,
-        "page": page,
-        "size": size
+        "success": True,
+        "message": "Success",
+        "data": {
+            "items": [OrderResponse.model_validate(o).model_dump() for o in orders],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": total_pages
+            }
+        }
     }
 
 @router.get("/staff/orders/{order_id}", response_model=OrderResponse)

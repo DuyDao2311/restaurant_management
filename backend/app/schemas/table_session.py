@@ -7,7 +7,7 @@ class NestedReservation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     customer_name: str
-    guest_count: int
+    number_of_guests: int
     customer_phone: Optional[str] = None
 
 class TableSessionResponse(BaseModel):

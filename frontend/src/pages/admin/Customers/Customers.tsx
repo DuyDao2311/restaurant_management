@@ -22,7 +22,8 @@ const CustomersPage = () => {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 20;
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
 
   // Modal states
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -39,9 +40,14 @@ const CustomersPage = () => {
         roleService.getRoles()
       ]);
       
-      setUsers(usersRes.data);
-      setTotalPages(Math.ceil(usersRes.total / itemsPerPage));
-      setRoles(rolesRes.data);
+      if (usersRes.success) {
+        setUsers(usersRes.data.items);
+        setTotalPages(usersRes.data.pagination.total_pages);
+        setTotalItems(usersRes.data.pagination.total);
+      }
+      if (rolesRes.success) {
+        setRoles(rolesRes.data.items);
+      }
       setCurrentPage(page);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Không thể tải danh sách người dùng.');
@@ -314,7 +320,7 @@ const CustomersPage = () => {
         {!isLoading && totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
             <span className="text-sm text-gray-500">
-              Trang {currentPage} / {totalPages}
+              Trang {currentPage} / {totalPages} (Tổng {totalItems} người dùng)
             </span>
             <div className="flex gap-2">
               <button
