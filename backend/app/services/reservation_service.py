@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, time, timedelta
 from app.models.reservation import Reservation
 from app.models.table import RestaurantTable
-from app.schemas.reservation import ReservationCreate
+from app.schemas.reservation import ReservationCreate, ReservationLookupRequest
 from fastapi import HTTPException, status
 from typing import List, Tuple, Optional
 import logging
@@ -672,4 +672,42 @@ def checkin_reservation(db: Session, reservation_id: int) -> Reservation:
     db.commit()
     db.refresh(reservation)
 
+    return reservation
+
+def lookup_guest_reservation(db: Session, data: ReservationLookupRequest) -> Reservation:
+    """
+    Tra cứu đặt bàn dành cho Guest: Code + Phone
+    """
+    from fastapi import HTTPException, status
+    
+    reservation = db.query(Reservation).filter(Reservation.reservation_code == data.reservation_code).first()
+    
+    if not reservation or reservation.customer_phone != data.customer_phone:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy thông tin đặt bàn với mã và số điện thoại này."
+        )
+        
+    return reservation
+
+def cancel_guest_reservation(db: Session, data: ReservationLookupRequest) -> Reservation:
+    """
+    Hủy đặt bàn dành cho Guest: Code + Phone
+    """
+    from fastapi import HTTPException, status
+    
+    reservation = lookup_guest_reservation(db, data)
+    
+    if reservation.status not in ["PENDING", "CONFIRMED"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Không thể hủy đặt bàn ở trạng thái {reservation.status}."
+        )
+        
+    reservation.status = "CANCELLED"
+    reservation.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(reservation)
+    
     return reservation

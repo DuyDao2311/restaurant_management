@@ -6,8 +6,10 @@ import StaffLayout from './components/layout/StaffLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
+import Story from './pages/Story';
 import CustomerMenu from './components/layout/Menu';
 import TablePage from './pages/TablePage';
+import ReservationLookup from './pages/ReservationLookup';
 
 // Admin Pages
 import DashboardPage from './pages/admin/Dashboard/Dashboard';
@@ -40,6 +42,8 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/story" element={<Story />} />
+          <Route path="/lookup" element={<ReservationLookup />} />
           <Route path="/menu" element={<CustomerMenu />} />
           <Route path="/table/:qrToken" element={<TablePage />} />
           <Route path="/login" element={<Login />} />

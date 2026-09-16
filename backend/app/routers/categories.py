@@ -19,18 +19,25 @@ def get_categories(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
-    """Get all categories with optional pagination and search. Public endpoint."""
+    """Get all categories with optional pagination, search, and status filter. Public endpoint."""
     try:
         items, total, total_pages = category_service.get_categories(
-            db=db, search=search, page=page, limit=limit
+            db=db, search=search, status=status, page=page, limit=limit
         )
+        result_items = []
+        for c in items:
+            c_dict = CategoryResponse.model_validate(c).model_dump()
+            c_dict["items_count"] = len(c.menu_items) if hasattr(c, "menu_items") else 0
+            result_items.append(c_dict)
+            
         return {
             "success": True,
             "message": "Success",
             "data": {
-                "items": [CategoryResponse.model_validate(c).model_dump() for c in items],
+                "items": result_items,
                 "pagination": {
                     "page": page,
                     "limit": limit,

@@ -18,6 +18,8 @@ class OrderItemResponse(OrderItemBase):
     unit_price: Decimal
     subtotal: Decimal
     status: str
+    menu_item_name: Optional[str] = None
+    menu_item_description: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -34,6 +36,8 @@ class OrderCreate(OrderBase):
 class OrderResponse(OrderBase):
     id: int
     order_code: str
+    user_id: Optional[int] = None
+    order_type: Optional[str] = None
     status: str
     subtotal: Decimal
     discount_amount: Optional[Decimal] = None

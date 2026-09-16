@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Clock, RefreshCw, Eye, ShoppingCart } from 'lucide-react';
+import {
+  Plus, Clock, RefreshCw, Eye, ShoppingCart, Search,
+  Home, Check, Users, Timer, Utensils, CheckCircle
+} from 'lucide-react';
 import { orderService } from '../../../services/orderService';
 import { tableService } from '../../../services/tableService';
 import { tableSessionService } from '../../../services/tableSessionService';
@@ -14,11 +17,17 @@ const StaffOrders = () => {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [activeSession, setActiveSession] = useState<TableSession | null>(null);
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Per-table running order counts (table_id -> {count, total})
+  const [tableOrderInfo, setTableOrderInfo] = useState<Record<number, { count: number; total: number }>>({});
 
   useEffect(() => {
     fetchTables();
@@ -30,13 +39,14 @@ const StaffOrders = () => {
       const response = await tableService.getTables(1, 100);
       if (response.success) {
         const allTables = response.data.items || [];
-        // Show OCCUPIED tables first, then others
+        // Sort: OCCUPIED first, then RESERVED, then AVAILABLE, then others
+        const statusOrder: Record<string, number> = { OCCUPIED: 0, RESERVED: 1, AVAILABLE: 2, MAINTENANCE: 3 };
         const sorted = [...allTables].sort((a, b) => {
-          if (a.status === 'OCCUPIED' && b.status !== 'OCCUPIED') return -1;
-          if (a.status !== 'OCCUPIED' && b.status === 'OCCUPIED') return 1;
-          return 0;
+          return (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
         });
         setTables(sorted);
+        // Fetch order info for OCCUPIED tables
+        fetchTableOrderInfoBatch(sorted.filter(t => t.status === 'OCCUPIED'));
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error);
@@ -45,10 +55,33 @@ const StaffOrders = () => {
     }
   };
 
+  const fetchTableOrderInfoBatch = async (occupiedTables: RestaurantTable[]) => {
+    const info: Record<number, { count: number; total: number }> = {};
+    for (const table of occupiedTables) {
+      try {
+        const session = await tableSessionService.getActiveSessionByTable(table.id);
+        if (session) {
+          const response = await tableSessionService.getOrdersBySession(session.id);
+          const sessionOrders: Order[] = response.items || [];
+          const activeOrders = sessionOrders.filter((o: Order) => o.status !== 'CANCELLED');
+          info[table.id] = {
+            count: activeOrders.length,
+            total: activeOrders.reduce((sum: number, o: Order) => sum + Number(o.total_amount), 0),
+          };
+        }
+      } catch {
+        // ignore per-table errors
+      }
+    }
+    setTableOrderInfo(info);
+  };
+
   const handleSelectTable = async (tableId: number) => {
     setSelectedTable(tableId);
     setActiveSession(null);
     setOrders([]);
+    setExpandedOrderId(null);
+    setStatusFilter('');
     setIsSessionLoading(true);
     try {
       const session = await tableSessionService.getActiveSessionByTable(tableId);
@@ -82,15 +115,14 @@ const StaffOrders = () => {
 
   const handleCloseSession = async () => {
     if (!activeSession) return;
-    
-    // Check if any order is uncompleted
+
     const uncompleted = orders.filter(o => !['COMPLETED', 'CANCELLED'].includes(o.status));
     if (uncompleted.length > 0) {
       alert('Không thể đóng phiên vì vẫn còn Order chưa hoàn thành.');
       return;
     }
 
-    if (!window.confirm('Bàn đã hoàn tất phục vụ.\nBạn có chắc chắn muốn đóng phiên?')) {
+    if (!window.confirm('Bàn đã hoàn tất phục vụ.\nBạn có chắc chắn muốn đóng phiên và thanh toán?')) {
       return;
     }
 
@@ -98,21 +130,9 @@ const StaffOrders = () => {
       await tableSessionService.closeSession(activeSession.id);
       alert('Đóng phiên bàn thành công.');
       refreshCurrentSession();
+      fetchTables();
     } catch (error: any) {
       alert(error?.response?.data?.detail || 'Không thể đóng phiên.');
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'CONFIRMED': return 'bg-blue-100 text-blue-800';
-      case 'PREPARING': return 'bg-purple-100 text-purple-800';
-      case 'READY': return 'bg-indigo-100 text-indigo-800';
-      case 'SERVED': return 'bg-green-100 text-green-800';
-      case 'COMPLETED': return 'bg-emerald-100 text-emerald-800';
-      case 'CANCELLED': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -126,6 +146,19 @@ const StaffOrders = () => {
       case 'COMPLETED': return 'Hoàn thành';
       case 'CANCELLED': return 'Đã hủy';
       default: return status;
+    }
+  };
+
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'bg-[#fffbeb] text-[#c4943a] border-[#f5dfa0]';
+      case 'CONFIRMED': return 'bg-[#eff6ff] text-[#3b82f6] border-[#bfdbfe]';
+      case 'PREPARING': return 'bg-[#f5f3ff] text-[#8b5cf6] border-[#ddd6fe]';
+      case 'READY': return 'bg-[#eef2ff] text-[#6366f1] border-[#c7d2fe]';
+      case 'SERVED': return 'bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]';
+      case 'COMPLETED': return 'bg-[#ecfdf5] text-[#059669] border-[#a7f3d0]';
+      case 'CANCELLED': return 'bg-[#fef2f2] text-[#dc2626] border-[#fecaca]';
+      default: return '';
     }
   };
 
@@ -144,199 +177,471 @@ const StaffOrders = () => {
     }
   };
 
+  const toggleExpandOrder = (orderId: number) => {
+    setExpandedOrderId(prev => prev === orderId ? null : orderId);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+  };
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  // Computed values
   const activeOrders = orders.filter(o => o.status !== 'CANCELLED');
   const sessionTotal = activeOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
   const uncompletedOrdersCount = activeOrders.filter(o => o.status !== 'COMPLETED').length;
 
+  const filteredTables = useMemo(() => {
+    if (!searchTerm) return tables;
+    return tables.filter(t =>
+      t.table_number.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [tables, searchTerm]);
+
+  const availableTablesCount = tables.filter(t => t.status === 'AVAILABLE').length;
+
+  const filteredOrders = useMemo(() => {
+    if (!statusFilter) return orders;
+    return orders.filter(o => o.status === statusFilter);
+  }, [orders, statusFilter]);
+
+  const selectedTableData = tables.find(t => t.id === selectedTable);
+
+  const getTableStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'OCCUPIED': return 'bg-[#fef2f2] text-[#c44b4b]';
+      case 'RESERVED': return 'bg-[#fef9ee] text-[#c4943a]';
+      case 'AVAILABLE': return 'bg-[#f0faf0] text-[#4b8f4b]';
+      case 'MAINTENANCE': return 'bg-[#f3f4f6] text-[#6b7280]';
+      default: return '';
+    }
+  };
+
+  const getTableStatusDotClass = (status: string) => {
+    switch (status) {
+      case 'OCCUPIED': return 'bg-[#c44b4b]';
+      case 'RESERVED': return 'bg-[#c4943a]';
+      case 'AVAILABLE': return 'bg-[#4b8f4b]';
+      case 'MAINTENANCE': return 'bg-[#6b7280]';
+      default: return '';
+    }
+  };
+
+  const translateTableStatus = (status: string) => {
+    switch (status) {
+      case 'OCCUPIED': return 'OCCUPIED';
+      case 'RESERVED': return 'RESERVED';
+      case 'AVAILABLE': return 'AVAILABLE';
+      case 'MAINTENANCE': return 'MAINTENANCE';
+      default: return status;
+    }
+  };
+
+  const getStatusMessage = (order: Order) => {
+    switch (order.status) {
+      case 'PENDING': return 'Đang chờ xác nhận từ nhà bếp';
+      case 'CONFIRMED': return 'Đã xác nhận, đang chờ chuẩn bị';
+      case 'PREPARING': return 'Đã chuyển thông tin tới Trạm Bếp Nóng & Quầy Pha Chế';
+      case 'READY': return 'Món đã sẵn sàng, chờ phục vụ';
+      case 'SERVED': return 'Đã phục vụ cho khách';
+      case 'COMPLETED': return 'Đơn hàng đã hoàn thành';
+      case 'CANCELLED': return 'Đơn hàng đã bị hủy';
+      default: return '';
+    }
+  };
+
   return (
-    <div className="p-6 max-w-7xl mx-auto flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý Đơn hàng</h1>
-          <p className="text-gray-500 mt-1">Chọn bàn đang hoạt động để xem và tạo đơn hàng</p>
-        </div>
-        <button 
-          onClick={refreshCurrentSession}
-          className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-2 bg-white"
-        >
-          <RefreshCw className={`w-5 h-5 ${isLoading || isSessionLoading ? 'animate-spin' : ''}`} />
-          <span className="font-medium hidden sm:inline">Làm mới</span>
-        </button>
-      </div>
-
-      <div className="flex flex-1 gap-6 overflow-hidden">
-        {/* Left pane: Tables list */}
-        <div className="w-1/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-          <div className="p-4 border-b bg-gray-50">
-            <h2 className="font-semibold text-gray-800">Danh sách Bàn</h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {isLoading ? (
-              <div className="flex justify-center p-4">
-                <RefreshCw className="w-6 h-6 animate-spin text-indigo-500" />
-              </div>
-            ) : tables.map(table => (
-              <button
-                key={table.id}
-                onClick={() => handleSelectTable(table.id)}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex justify-between items-center ${
-                  selectedTable === table.id 
-                    ? 'border-indigo-500 bg-indigo-50 shadow-sm' 
-                    : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
-                }`}
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900">{table.table_number}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    table.status === 'OCCUPIED' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                  }`}>
-                    {table.status}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Right pane: Session & Orders */}
-        <div className="w-2/3 flex flex-col gap-4 overflow-hidden">
-          {selectedTable ? (
-            isSessionLoading ? (
-              <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
-                <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
-              </div>
-            ) : activeSession ? (
-              <>
-                {/* Session Info */}
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 mb-2">Bàn {tables.find(t => t.id === selectedTable)?.table_number}</h2>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-600">
-                        {activeSession.reservation ? (
-                          <>
-                            <p><span className="font-medium text-gray-800">Khách:</span> {activeSession.reservation.customer_name}</p>
-                            <p><span className="font-medium text-gray-800">Số khách:</span> {activeSession.reservation.number_of_guests} người</p>
-                          </>
-                        ) : (
-                          <>
-                            <p><span className="font-medium text-gray-800">Khách:</span> Vãng lai</p>
-                            <p></p>
-                          </>
-                        )}
-                        <p><span className="font-medium text-gray-800">Session:</span> <span className="text-green-600 font-semibold">{activeSession.status}</span></p>
-                        <p><span className="font-medium text-gray-800">Bắt đầu:</span> {new Date(activeSession.started_at).toLocaleString()}</p>
-                        <p><span className="font-medium text-gray-800">Tổng Order:</span> {orders.length}</p>
-                        <p><span className="font-medium text-gray-800">Tổng tiền:</span> <span className="font-bold text-indigo-600">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(sessionTotal)}</span></p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 border-t border-gray-100 pt-4">
-                    {activeSession.status === 'ACTIVE' && (
-                      <button
-                        onClick={() => navigate('/staff/orders/create')}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
-                      >
-                        <Plus size={20} />
-                        Tạo Order
-                      </button>
-                    )}
-                    {activeSession.status === 'ACTIVE' && (
-                      <button
-                        onClick={handleCloseSession}
-                        disabled={uncompletedOrdersCount > 0}
-                        className={`flex-1 flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors border ${
-                          uncompletedOrdersCount > 0 
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                            : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 shadow-sm'
-                        }`}
-                        title={uncompletedOrdersCount > 0 ? 'Vẫn còn Order chưa hoàn thành' : 'Đóng phiên phục vụ'}
-                      >
-                        Đóng Session
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Orders List */}
-                <div className="bg-white flex-1 rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                  <div className="p-4 border-b bg-gray-50">
-                    <h3 className="font-semibold text-gray-800">Danh sách Order</h3>
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    {orders.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8">
-                        <ShoppingCart className="w-12 h-12 mb-3 opacity-30" />
-                        <p className="text-lg font-medium text-gray-600">Chưa có Order nào</p>
-                        <p className="text-sm">Hãy nhấn nút "Tạo Order" để bắt đầu order cho khách.</p>
-                      </div>
-                    ) : (
-                      <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-white shadow-sm z-10">
-                          <tr className="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                            <th className="px-6 py-3 font-semibold">Mã Đơn</th>
-                            <th className="px-6 py-3 font-semibold">Source</th>
-                            <th className="px-6 py-3 font-semibold">Tổng Tiền</th>
-                            <th className="px-6 py-3 font-semibold">Trạng thái</th>
-                            <th className="px-6 py-3 font-semibold text-right">Thao tác</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {orders.map((order) => (
-                            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4">
-                                <span className="font-semibold text-gray-900">{order.order_code}</span>
-                                <div className="text-xs text-gray-500 mt-1 flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {new Date(order.created_at || '').toLocaleTimeString()}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded">STAFF</span>
-                              </td>
-                              <td className="px-6 py-4 font-bold text-gray-900">
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.total_amount))}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${getStatusColor(order.status)}`}>
-                                  {translateStatus(order.status)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <button
-                                  onClick={() => openOrderDetails(order.id)}
-                                  className="inline-flex items-center justify-center p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                  title="Xem Chi Tiết"
-                                >
-                                  <Eye className="w-5 h-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-gray-400 p-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-gray-300">?</span>
-                </div>
-                <p className="text-lg font-medium text-gray-600 mb-1">Không có phiên hoạt động</p>
-                <p className="text-sm text-center">Bàn này chưa được Check-in. <br/>Vui lòng Check-in Booking để tạo phiên bàn.</p>
-              </div>
-            )
-          ) : (
-            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-gray-400 p-8">
-              <ShoppingCart className="w-16 h-16 mb-4 opacity-20" />
-              <p className="text-lg font-medium text-gray-600">Chọn một bàn để xem chi tiết</p>
+    <div className="flex h-[calc(100vh-4rem)] bg-[#faf9f7] overflow-hidden">
+      {/* ===== LEFT PANEL: Table List ===== */}
+      <div className="w-[320px] min-w-[320px] bg-white border-r border-[#e8e5e0] flex flex-col overflow-hidden">
+        <div className="px-5 pt-5 pb-4 border-b border-[#f0ede8]">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2 text-base font-bold text-[#1a1a1a] font-['Inter']">
+              <Home className="w-[18px] h-[18px] text-[#8b7355]" /> Danh Sách Bàn
             </div>
+            <span className="text-[11px] font-semibold text-[#6b8f5e] bg-[#ecf5e7] px-2.5 py-[3px] rounded-full tracking-[0.02em]">
+              {availableTablesCount} bàn khả dụng
+            </span>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b5b0a8]" />
+            <input
+              type="text"
+              className="w-full py-2.5 pr-3.5 pl-[38px] border-[1.5px] border-[#e8e5e0] rounded-[10px] text-[13px] text-[#555] bg-[#faf9f7] outline-none transition-all duration-200 font-['Inter'] focus:border-[#c4a87c] focus:bg-white focus:ring-[3px] focus:ring-[#c4a87c]/10 placeholder:text-[#b5b0a8]"
+              placeholder="Tìm theo số bàn (B01, VIP01...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#ddd] [&::-webkit-scrollbar-thumb]:rounded-full">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-10">
+              <RefreshCw className="w-8 h-8 text-[#c4a87c] animate-spin" />
+            </div>
+          ) : filteredTables.length === 0 ? (
+            <div className="p-6 text-center text-[#999] text-[13px]">
+              Không tìm thấy bàn nào
+            </div>
+          ) : (
+            filteredTables.map(table => {
+              const isSelected = selectedTable === table.id;
+              const orderInfo = tableOrderInfo[table.id];
+              return (
+                <div
+                  key={table.id}
+                  className={`relative px-4 py-3.5 border-2 rounded-xl mb-2 cursor-pointer transition-all duration-200 bg-white hover:border-[#d4cfc7] hover:bg-[#fdfcfb] ${
+                    isSelected ? 'border-[#c4a87c] bg-[#fdf8f0] shadow-[0_2px_12px_rgba(196,168,124,0.15)]' : 'border-[#f0ede8]'
+                  }`}
+                  onClick={() => handleSelectTable(table.id)}
+                >
+                  <div className={`absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-[#c4a87c] flex items-center justify-center text-white ${isSelected ? 'flex' : 'hidden'}`}>
+                    <Check className="w-[13px] h-[13px]" />
+                  </div>
+
+                  <div className="text-[15px] font-bold text-[#1a1a1a] mb-0.5 font-['Inter']">
+                    Bàn {table.table_number}
+                    {table.location && <span className="text-xs font-normal text-[#999] ml-1.5">{table.location}</span>}
+                  </div>
+
+                  {table.capacity > 6 && (
+                    <div className={`absolute top-3.5 right-3.5 text-xs font-semibold text-[#c44b4b] ${isSelected ? 'right-10' : ''}`}>
+                      Tối đa {table.capacity} Khách
+                    </div>
+                  )}
+                  {table.capacity <= 6 && !isSelected && (
+                    <div className="absolute top-3.5 right-3.5 text-xs font-semibold text-[#999]">
+                      {table.capacity} Khách
+                    </div>
+                  )}
+
+                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-[3px] rounded uppercase tracking-[0.05em] mt-1.5 ${getTableStatusBadgeClass(table.status)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${getTableStatusDotClass(table.status)}`}></span>
+                    {translateTableStatus(table.status)}
+                  </span>
+
+                  {table.status === 'OCCUPIED' && (
+                    <>
+                      <div className="text-xs text-[#999] mt-1.5 leading-relaxed">
+                        <span className="text-[#555] font-medium">Khách đang dùng bữa</span>
+                      </div>
+                      {orderInfo && orderInfo.count > 0 && (
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-[#e8e5e0] text-xs">
+                          <span className="text-[#888]">{orderInfo.count} Order đang chạy</span>
+                          <span className="font-bold text-[#1a1a1a] text-[14px]">{formatCurrency(orderInfo.total)} đ</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {table.status === 'RESERVED' && (
+                    <div className="text-xs text-[#999] mt-1.5 leading-relaxed">
+                      Bàn đã được đặt trước
+                    </div>
+                  )}
+
+                  {table.status === 'AVAILABLE' && (
+                    <div className="text-xs text-[#999] mt-1.5 leading-relaxed">
+                      Bàn tiêu chuẩn ({table.capacity} chỗ)
+                    </div>
+                  )}
+
+                  {table.status === 'MAINTENANCE' && (
+                    <div className="text-xs text-[#999] mt-1.5 leading-relaxed">
+                      Bàn đang bảo trì
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
 
+      {/* ===== RIGHT PANEL: Session Detail ===== */}
+      <div className="flex-1 overflow-y-auto px-8 py-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#ddd] [&::-webkit-scrollbar-thumb]:rounded-full">
+        {selectedTable ? (
+          isSessionLoading ? (
+            <div className="flex flex-col items-center justify-center h-full text-[#aaa]">
+              <RefreshCw className="w-16 h-16 opacity-20 mb-4 animate-spin" />
+            </div>
+          ) : activeSession ? (
+            <>
+              {/* Session Header */}
+              <div className="mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-[28px] font-extrabold text-[#1a1a1a] font-['Inter']">
+                    Bàn {selectedTableData?.table_number}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md text-xs font-bold tracking-[0.03em] bg-[#e8f5e9] text-[#2e7d32] border border-[#c8e6c9]">
+                    <span className="w-[7px] h-[7px] rounded-full bg-[#43a047] animate-pulse"></span>
+                    Session: {activeSession.status}
+                  </span>
+                  {selectedTableData?.location && (
+                    <span className="text-[13px] text-[#999] ml-auto font-medium">
+                      Khu Vực {selectedTableData.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Session Info Grid */}
+              <div className="grid grid-cols-4 gap-0 bg-white border border-[#e8e5e0] rounded-xl mb-5 overflow-hidden">
+                <div className="px-5 py-[18px] border-r border-[#f0ede8]">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Khách Hàng</div>
+                  <div className="text-[15px] font-bold text-[#1a1a1a]">
+                    {activeSession.reservation?.customer_name || 'Vãng lai'}
+                  </div>
+                </div>
+                <div className="px-5 py-[18px] border-r border-[#f0ede8]">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Số Khách</div>
+                  <div className="text-[15px] font-bold text-[#1a1a1a]">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-[#aaa]" />
+                      {activeSession.reservation?.number_of_guests || '–'} người
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[#aaa] mt-1 flex items-center gap-1">
+                    Bàn {selectedTableData?.capacity} chỗ
+                  </div>
+                </div>
+                <div className="px-5 py-[18px] border-r border-[#f0ede8]">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Thời Gian Bắt Đầu</div>
+                  <div className="text-[15px] font-bold text-[#1a1a1a]">
+                    {formatTime(activeSession.started_at)}
+                  </div>
+                  <div className="text-[11px] text-[#aaa] mt-1 flex items-center gap-1">
+                    {formatDate(activeSession.started_at)}
+                  </div>
+                </div>
+                <div className="px-5 py-[18px]">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Tổng Chi Tiêu Hiện Tại</div>
+                  <div className="text-[24px] font-extrabold text-[#1a1a1a]">
+                    {formatCurrency(sessionTotal)} <span className="text-[14px] font-medium">đ</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {activeSession.status === 'ACTIVE' && (
+                <div className="grid grid-cols-2 gap-3.5 mb-7">
+                  <button
+                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-br from-[#d4a843] to-[#c49032] text-white rounded-xl text-sm font-bold transition-all duration-200 shadow-[0_2px_8px_rgba(196,144,50,0.3)] hover:from-[#c49832] hover:to-[#b48028] hover:shadow-[0_4px_16px_rgba(196,144,50,0.4)] hover:-translate-y-[1px] font-['Inter']"
+                    onClick={() => navigate('/staff/orders/create')}
+                  >
+                    <Plus className="w-[18px] h-[18px]" /> Tạo Order / Gọi Thêm Món
+                  </button>
+                  <button
+                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-[#555] border-[1.5px] border-[#e0dcd5] rounded-xl text-sm font-semibold transition-all duration-200 hover:bg-[#faf9f7] hover:border-[#c4a87c] hover:text-[#333] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-[#e0dcd5] disabled:hover:text-[#555] font-['Inter']"
+                    onClick={handleCloseSession}
+                    disabled={uncompletedOrdersCount > 0}
+                    title={uncompletedOrdersCount > 0 ? 'Vẫn còn Order chưa hoàn thành' : 'Đóng phiên phục vụ'}
+                  >
+                    <Timer className="w-[18px] h-[18px]" /> Đóng Session / Thanh Toán Bàn
+                  </button>
+                </div>
+              )}
+
+              {/* Orders List */}
+              <div className="bg-white border border-[#e8e5e0] rounded-xl overflow-hidden mb-6">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0ede8]">
+                  <div className="flex items-center gap-2.5 text-base font-bold text-[#1a1a1a] font-['Inter']">
+                    Danh Sách Order
+                    <span className="text-[11px] font-semibold text-[#c4943a] bg-[#fef9ee] px-2.5 py-0.5 rounded-full">
+                      {orders.length} đơn hàng
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs text-[#999]">Bộ lọc:</span>
+                    <select
+                      className="py-1.5 pl-3 pr-8 border border-[#e0dcd5] rounded-lg text-xs text-[#555] bg-white cursor-pointer outline-none appearance-none font-['Inter'] focus:border-[#c4a87c] bg-[url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23999\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'m6 9 6 6 6-6\'/></svg>')] bg-no-repeat bg-[right_10px_center]"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">Tất cả trạng thái</option>
+                      <option value="PENDING">Chờ xử lý</option>
+                      <option value="CONFIRMED">Đã xác nhận</option>
+                      <option value="PREPARING">Đang chuẩn bị</option>
+                      <option value="READY">Đã sẵn sàng</option>
+                      <option value="SERVED">Đã phục vụ</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                  </div>
+                </div>
+
+                {filteredOrders.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <ShoppingCart className="w-12 h-12 text-[#ddd] mx-auto mb-3" />
+                    <p className="text-sm text-[#999] font-medium">
+                      {orders.length === 0 ? 'Chưa có Order nào' : 'Không có Order phù hợp bộ lọc'}
+                    </p>
+                    {orders.length === 0 && (
+                      <p className="text-xs text-[#bbb] mt-1">
+                        Nhấn nút "Tạo Order / Gọi Thêm Món" để bắt đầu.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <table className="w-full border-collapse">
+                    <thead className="bg-[#faf9f7]">
+                      <tr>
+                        <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] text-left border-b border-[#f0ede8]">Mã Đơn</th>
+                        <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] text-left border-b border-[#f0ede8]">Source (Nguồn)</th>
+                        <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] text-left border-b border-[#f0ede8]">Tổng Tiền</th>
+                        <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] text-left border-b border-[#f0ede8]">Trạng Thái</th>
+                        <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] text-center border-b border-[#f0ede8]">Thao Tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => (
+                        <React.Fragment key={order.id}>
+                          <tr
+                            className={`transition-colors duration-150 hover:bg-[#fdfcfb] cursor-pointer ${expandedOrderId === order.id ? 'bg-[#fdfcfb]' : ''}`}
+                            onClick={() => toggleExpandOrder(order.id)}
+                          >
+                            <td className="px-5 py-3.5 text-[13px] text-[#333] border-b border-[#f5f3f0] align-middle">
+                              <div className="font-bold text-[#1a1a1a] font-['Inter']">{order.order_code}</div>
+                              <div className="flex items-center gap-1 text-[11px] text-[#aaa] mt-[3px]">
+                                <Clock className="w-3 h-3" /> {formatTime(order.created_at || '')}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 text-[13px] text-[#333] border-b border-[#f5f3f0] align-middle">
+                              <span className={`inline-flex px-2.5 py-[3px] rounded font-bold text-[11px] uppercase tracking-[0.05em] ${(order.order_type || 'STAFF').toLowerCase() === 'staff' ? 'bg-[#eef2ff] text-[#6366f1]' : 'bg-[#fef3c7] text-[#d97706]'}`}>
+                                {order.order_type || 'STAFF'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-[13px] text-[#333] border-b border-[#f5f3f0] align-middle">
+                              <div className="font-bold text-[#1a1a1a]">
+                                {formatCurrency(Number(order.total_amount))} đ
+                                <span className="block text-[10px] font-normal text-[#bbb] mt-0.5">Bao gồm thuế VAT (8%)</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 text-[13px] text-[#333] border-b border-[#f5f3f0] align-middle">
+                              <span className={`inline-flex items-center px-3.5 py-[5px] rounded-md text-[11px] font-bold tracking-[0.03em] border-[1.5px] ${getStatusClasses(order.status)}`}>
+                                {translateStatus(order.status).toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-[13px] text-[#333] border-b border-[#f5f3f0] align-middle">
+                              <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#e8e5e0] bg-white text-[#888] cursor-pointer transition-colors duration-150 hover:bg-[#f5f3f0] hover:text-[#555] hover:border-[#d4cfc7]"
+                                  title="Xem Chi Tiết"
+                                  onClick={() => openOrderDetails(order.id)}
+                                >
+                                  <Eye className="w-[15px] h-[15px]" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Expanded Detail Row */}
+                          {expandedOrderId === order.id && (
+                            <tr className="bg-[#faf9f7] border-t border-dashed border-[#e8e5e0]">
+                              <td colSpan={5} className="p-0">
+                                <div className="p-5 px-6">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-[13px] font-bold text-[#555]">
+                                      <Utensils className="w-4 h-4 text-[#c4a87c]" />
+                                      MÓN ĂN TRONG ĐƠN {order.order_code}
+                                    </div>
+                                    {order.user_id && (
+                                      <div className="text-xs text-[#aaa] italic">
+                                        Nhân viên ghi order: Staff #{order.user_id}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex gap-3.5 flex-wrap mb-4">
+                                    {order.order_items?.map((item) => (
+                                      <div key={item.id} className="flex-1 min-w-[260px] max-w-[380px] bg-white border border-[#e8e5e0] rounded-[10px] px-4 py-3.5 flex gap-3">
+                                        <div className="flex items-center justify-center w-8 h-8 min-w-[32px] bg-[#f5f3f0] rounded-lg text-[13px] font-bold text-[#c4943a]">
+                                          {item.quantity}×
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="text-[13px] font-bold text-[#1a1a1a] mb-[3px]">
+                                            {item.menu_item_name || `Món #${item.menu_item_id}`}
+                                          </div>
+                                          {item.menu_item_description && (
+                                            <div className="text-[11px] text-[#aaa] leading-[1.4]">
+                                              {item.menu_item_description}
+                                            </div>
+                                          )}
+                                          {item.note && (
+                                            <div className="text-[11px] text-[#c4943a] mt-[3px] italic">
+                                              Ghi chú: "{item.note}"
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="text-[14px] font-bold text-[#1a1a1a] whitespace-nowrap self-start">
+                                          {formatCurrency(Number(item.subtotal))} đ
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {(!order.order_items || order.order_items.length === 0) && (
+                                      <div className="p-4 text-[#aaa] text-[13px]">
+                                        Đơn hàng chưa có món nào.
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center justify-between pt-3.5 border-t border-dashed border-[#e8e5e0]">
+                                    <div className="flex items-center gap-1.5 text-xs text-[#6b8f5e]">
+                                      <CheckCircle className="w-3.5 h-3.5" />
+                                      {getStatusMessage(order)}
+                                    </div>
+                                    <button
+                                      className="px-[18px] py-2 border-[1.5px] border-[#1a1a1a] rounded-lg bg-white text-[#1a1a1a] text-xs font-bold cursor-pointer transition-colors duration-150 font-['Inter'] hover:bg-[#1a1a1a] hover:text-white"
+                                      onClick={() => openOrderDetails(order.id)}
+                                    >
+                                      Cập Nhật Trạng Thái Món
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          ) : (
+            /* No active session */
+            <div className="flex flex-col items-center justify-center h-full text-[#aaa]">
+              <div className="w-20 h-20 rounded-full bg-[#f5f3f0] flex items-center justify-center mb-4">
+                <span className="text-[32px] text-[#ccc]">?</span>
+              </div>
+              <h3 className="text-lg font-semibold text-[#666] mb-2">Không có phiên hoạt động</h3>
+              <p className="text-sm text-[#999] text-center">
+                Bàn này chưa được Check-in.<br />
+                Vui lòng Check-in Booking để tạo phiên bàn.
+              </p>
+            </div>
+          )
+        ) : (
+          /* No table selected */
+          <div className="flex flex-col items-center justify-center h-full text-[#aaa]">
+            <ShoppingCart className="w-16 h-16 opacity-20 mb-4" />
+            <h3 className="text-lg font-semibold text-[#666] mb-2">Chọn một bàn để xem chi tiết</h3>
+            <p className="text-sm text-[#999] text-center">Chọn bàn từ danh sách bên trái để xem thông tin phiên và đơn hàng.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Order Detail Modal */}
       {selectedOrder && (
         <OrderDetailModal
           order={selectedOrder}

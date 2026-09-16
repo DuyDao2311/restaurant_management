@@ -5,6 +5,7 @@ import { Search, Filter, Eye, CheckCircle, XCircle, UserCheck } from 'lucide-rea
 import AssignTableModal from './AssignTableModal';
 import RejectReservationModal from './RejectReservationModal';
 import ReservationDetailModal from './ReservationDetailModal';
+import Pagination from '../../../components/common/Pagination';
 
 const Reservations: React.FC = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -283,36 +284,11 @@ const Reservations: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(p => p - 1)}
-                className="px-4 py-2 border border-gray-200 rounded-[12px] bg-white text-gray-400 text-[13px] font-semibold hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                Trước
-              </button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-9 h-9 flex items-center justify-center rounded-[10px] text-[13px] font-bold transition-colors ${page === p
-                      ? 'bg-[#111111] text-white'
-                      : 'border border-gray-200 text-gray-500 hover:bg-gray-50'
-                      }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                disabled={page === totalPages}
-                onClick={() => setPage(p => p + 1)}
-                className="px-4 py-2 border border-gray-200 rounded-[12px] bg-white text-gray-500 text-[13px] font-semibold hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                Sau
-              </button>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
             </div>
           </div>
         )}

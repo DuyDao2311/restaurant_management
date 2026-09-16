@@ -355,7 +355,7 @@ const Home = () => {
                   </svg>
                 </div>
                 <h3 className="text-2xl font-normal text-slate-900 mb-2" style={{ fontFamily: '"Playfair Display", serif' }}>Đặt bàn thành công!</h3>
-                <p className="text-gray-500 mb-8">Nhà hàng sẽ xác nhận đặt bàn của quý khách trong thời gian sớm nhất.</p>
+                <p className="text-gray-500 mb-8">Vui lòng lưu mã đặt bàn để tra cứu sau này.</p>
 
                 <div className="text-left bg-[#FAF9F5] p-6 rounded-lg mb-8 max-w-sm mx-auto">
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -381,20 +381,29 @@ const Home = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setSuccessData(null);
-                    setName('');
-                    setPhone('');
-                    setDate('');
-                    setTime('');
-                    setGuests('2');
-                    setNotes('');
-                  }}
-                  className="bg-[#111] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors"
-                >
-                  Đặt bàn khác
-                </button>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Link
+                    to="/lookup"
+                    className="w-full sm:w-auto bg-[#111] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors text-center"
+                  >
+                    Tra cứu đặt bàn
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setSuccessData(null);
+                      setName('');
+                      setPhone('');
+                      setDate('');
+                      setTime('');
+                      setGuests('2');
+                      setNotes('');
+                    }}
+                    className="w-full sm:w-auto bg-transparent px-8 py-3 text-xs font-bold uppercase tracking-widest transition-colors border text-center"
+                    style={{ color: goldColor, borderColor: goldColor }}
+                  >
+                    Về trang chủ
+                  </button>
+                </div>
               </div>
             ) : (
               <>

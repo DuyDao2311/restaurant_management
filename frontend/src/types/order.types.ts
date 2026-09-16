@@ -7,6 +7,8 @@ export interface OrderItem {
   subtotal: number;
   note?: string;
   status: string;
+  menu_item_name?: string;
+  menu_item_description?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,6 +17,8 @@ export interface Order {
   id: number;
   order_code: string;
   table_session_id: number;
+  user_id?: number;
+  order_type?: string;
   status: string;
   subtotal: number;
   discount_amount?: number;

@@ -34,10 +34,12 @@ const Menu: React.FC = () => {
         ]);
 
         if (catsRes.data.success) {
-          setCategories(catsRes.data.data);
+          const categoriesData = catsRes.data.data.items || catsRes.data.data;
+          setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         }
         if (itemsRes.data.success) {
-          setMenuItems(itemsRes.data.data);
+          const menuItemsData = itemsRes.data.data.items || itemsRes.data.data;
+          setMenuItems(Array.isArray(menuItemsData) ? menuItemsData : []);
         }
       } catch (error) {
         console.error("Error fetching menu data", error);

@@ -4,14 +4,15 @@ import axios from 'axios';
 import { Search, ChevronDown, RefreshCw, Plus, MoreVertical, Trash2, Pencil, CheckCircle2, AlertCircle, QrCode } from 'lucide-react';
 import { tableService } from '../../../services/tableService';
 import { RestaurantTable } from '../../../types/table';
-import { Pagination } from '../../../types';
+import { Pagination as PaginationType } from '../../../types';
 import TableStatusBadge from './TableStatusBadge';
 import TableForm from './TableForm';
+import Pagination from '../../../components/common/Pagination';
 
 const TablesPage = () => {
   const navigate = useNavigate();
   const [tables, setTables] = useState<RestaurantTable[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, total_pages: 0 });
+  const [pagination, setPagination] = useState<PaginationType>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -300,35 +301,11 @@ const TablesPage = () => {
               </p>
             </div>
             <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <span>&lt; Trước</span>
-                </button>
-                {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => handlePageChange(p)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      p === pagination.page
-                        ? 'z-10 bg-black text-white border-black'
-                        : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.total_pages}
-                  className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <span>Sau &gt;</span>
-                </button>
-              </nav>
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.total_pages}
+                onPageChange={handlePageChange}
+              />
             </div>
           </div>
         )}

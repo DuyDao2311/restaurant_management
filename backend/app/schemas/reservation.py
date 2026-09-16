@@ -144,6 +144,30 @@ class ReservationGuestResponse(BaseModel):
 class ReservationAssignTable(BaseModel):
     table_id: int
 
+class ReservationLookupRequest(BaseModel):
+    reservation_code: str
+    customer_phone: str
+
+    @field_validator("reservation_code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Mã đặt bàn không được để trống")
+        if not re.match(r"^RSV-\d{8}-\d{3,}$", v):
+            raise ValueError("Định dạng mã đặt bàn không hợp lệ")
+        return v
+
+    @field_validator("customer_phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Số điện thoại không được để trống")
+        if not re.match(r"^\+?[0-9]{9,15}$", v):
+            raise ValueError("Số điện thoại không hợp lệ")
+        return v
+
 class ReservationReject(BaseModel):
     reason: str
     

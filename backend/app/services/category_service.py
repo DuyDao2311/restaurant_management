@@ -15,11 +15,12 @@ from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryStatusU
 def get_categories(
     db: Session,
     search: Optional[str] = None,
+    status: Optional[str] = None,
     page: int = 1,
     limit: int = 10
 ) -> Tuple[List[Category], int, int]:
     """
-    Get categories with pagination and optional search filter.
+    Get categories with pagination, search, and status filter.
     Returns (items, total_count, total_pages).
     """
     query = db.query(Category)
@@ -27,6 +28,9 @@ def get_categories(
     if search:
         search_term = f"%{search}%"
         query = query.filter(Category.name.ilike(search_term))
+        
+    if status and status != 'ALL':
+        query = query.filter(Category.status == status)
 
     total = query.count()
     total_pages = math.ceil(total / limit) if limit > 0 else 0

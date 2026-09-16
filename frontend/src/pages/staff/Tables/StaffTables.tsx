@@ -6,6 +6,7 @@ import { tableService } from '../../../services/tableService';
 import StaffTableCard from './StaffTableCard';
 import StaffTableDetailModal from './StaffTableDetailModal';
 import UpdateTableStatusModal from './UpdateTableStatusModal';
+import PaginationComponent from '../../../components/common/Pagination';
 
 const StaffTables = () => {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
@@ -229,35 +230,11 @@ const StaffTables = () => {
           {/* Pagination */}
           {pagination.total_pages > 1 && (
             <div className="mt-6 flex justify-center">
-              <nav className="flex items-center gap-1">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Trước
-                </button>
-                {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => handlePageChange(p)}
-                    className={`px-3 py-1 text-sm font-medium rounded-md ${
-                      p === pagination.page
-                        ? 'bg-blue-600 text-white border border-blue-600'
-                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.total_pages}
-                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Sau
-                </button>
-              </nav>
+              <PaginationComponent
+                currentPage={pagination.page}
+                totalPages={pagination.total_pages}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </>

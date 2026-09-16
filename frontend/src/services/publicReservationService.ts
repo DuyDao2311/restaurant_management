@@ -5,8 +5,12 @@ export const publicReservationService = {
     const response = await api.post('/reservations/', data);
     return response.data;
   },
-  lookupReservation: async (code: string): Promise<any> => {
-    const response = await api.get(`/reservations/lookup/${code}`);
+  lookupReservation: async (reservation_code: string, customer_phone: string): Promise<any> => {
+    const response = await api.post('/reservations/lookup', { reservation_code, customer_phone });
+    return response.data;
+  },
+  cancelGuestReservation: async (reservation_code: string, customer_phone: string): Promise<any> => {
+    const response = await api.post('/reservations/guest-cancel', { reservation_code, customer_phone });
     return response.data;
   }
 };

@@ -73,6 +73,7 @@ export interface Category {
   status: string;
   created_at?: string;
   updated_at?: string;
+  items_count?: number;
 }
 
 // ==================== Menu Item ====================

@@ -43,7 +43,22 @@ const Header = () => {
             >
               Thực đơn
             </Link>
-            <Link to="/story" className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-900 py-1 transition-colors">
+            <Link 
+              to="/lookup" 
+              className={`text-xs font-bold uppercase tracking-wider py-1 transition-colors ${
+                isActive('/lookup') ? 'text-gray-900 border-b-2' : 'text-gray-500 hover:text-gray-900'
+              }`}
+              style={isActive('/lookup') ? { borderColor: goldColor } : {}}
+            >
+              Tra cứu đặt bàn
+            </Link>
+            <Link
+              to="/story"
+              className={`text-xs font-bold uppercase tracking-wider py-1 transition-colors ${
+                isActive('/story') ? 'text-gray-900 border-b-2' : 'text-gray-500 hover:text-gray-900'
+              }`}
+              style={isActive('/story') ? { borderColor: goldColor } : {}}
+            >
               Câu chuyện
             </Link>
           </nav>

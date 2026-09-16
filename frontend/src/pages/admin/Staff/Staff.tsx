@@ -4,6 +4,7 @@ import staffService, { Staff, Pagination } from '../../../services/staffService'
 import StaffTable from './StaffTable';
 import StaffModal from './StaffModal';
 import StaffDetailModal from './StaffDetailModal';
+import PaginationComponent from '../../../components/common/Pagination';
 
 const StaffPage = () => {
   const [staffList, setStaffList] = useState<Staff[]>([]);
@@ -193,52 +194,18 @@ const StaffPage = () => {
           />
 
           {/* Pagination */}
-          {pagination.total_pages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-lg sm:px-6">
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Hiển thị <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> đến{' '}
-                    <span className="font-medium">
-                      {Math.min(pagination.page * pagination.limit, pagination.total)}
-                    </span>{' '}
-                    trong <span className="font-medium">{pagination.total}</span> kết quả
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    <button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Trước
-                    </button>
-                    {Array.from({ length: pagination.total_pages }).map((_, idx) => (
-                      <button
-                        key={idx + 1}
-                        onClick={() => handlePageChange(idx + 1)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          pagination.page === idx + 1
-                            ? 'z-10 bg-amber-50 border-amber-500 text-amber-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.total_pages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Sau
-                    </button>
-                  </nav>
-                </div>
-              </div>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div className="mb-4 sm:mb-0">
+              Hiển thị <span className="font-semibold text-gray-900">{staffList.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)}</span> trên tổng số <span className="font-semibold text-gray-900">{pagination.total}</span> nhân viên
             </div>
-          )}
+            {pagination.total_pages > 0 && (
+              <PaginationComponent
+                currentPage={pagination.page}
+                totalPages={pagination.total_pages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </div>
         </>
       )}
 

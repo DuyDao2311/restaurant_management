@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas.reservation import ReservationCreate, ReservationResponse, ReservationGuestResponse
-from app.services.reservation_service import create_reservation, get_my_reservations, get_reservation_by_id_and_user, cancel_my_reservation, get_reservation_by_code
+from app.schemas.reservation import ReservationCreate, ReservationResponse, ReservationGuestResponse, ReservationLookupRequest
+from app.services.reservation_service import create_reservation, get_my_reservations, get_reservation_by_id_and_user, cancel_my_reservation, get_reservation_by_code, lookup_guest_reservation, cancel_guest_reservation
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from typing import List, Optional
@@ -76,3 +76,22 @@ def api_lookup_reservation(
     """
     return get_reservation_by_code(db, reservation_code)
 
+@router.post("/lookup", response_model=ReservationGuestResponse)
+def api_lookup_guest_reservation(
+    data: ReservationLookupRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Tra cứu thông tin đặt bàn bằng mã reservation_code và số điện thoại.
+    """
+    return lookup_guest_reservation(db, data)
+
+@router.post("/guest-cancel", response_model=ReservationGuestResponse)
+def api_cancel_guest_reservation(
+    data: ReservationLookupRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Hủy đặt bàn (Guest) bằng mã reservation_code và số điện thoại.
+    """
+    return cancel_guest_reservation(db, data)

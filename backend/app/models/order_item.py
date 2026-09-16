@@ -24,4 +24,12 @@ class OrderItem(Base):
 
     # Relationships
     order = relationship("Order", back_populates="order_items")
-    menu_item = relationship("MenuItem", back_populates="order_items")
+    menu_item = relationship("MenuItem", back_populates="order_items", lazy="joined")
+
+    @property
+    def menu_item_name(self):
+        return self.menu_item.name if self.menu_item else None
+
+    @property
+    def menu_item_description(self):
+        return self.menu_item.description if self.menu_item else None

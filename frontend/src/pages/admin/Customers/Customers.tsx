@@ -6,6 +6,7 @@ import roleService, { Role } from '../../../services/roleService';
 import ChangeRoleModal from './ChangeRoleModal';
 import ChangeStatusModal from './ChangeStatusModal';
 import CustomerDetailModal from './CustomerDetailModal';
+import Pagination from '../../../components/common/Pagination';
 
 const CustomersPage = () => {
   const { user: currentUser } = useAuth();
@@ -318,26 +319,15 @@ const CustomersPage = () => {
 
         {/* Pagination */}
         {!isLoading && totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <span className="text-sm text-gray-500">
               Trang {currentPage} / {totalPages} (Tổng {totalItems} người dùng)
             </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
-              >
-                Trước
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
-              >
-                Sau
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </div>

@@ -58,6 +58,7 @@ class CategoryResponse(BaseModel):
     status: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    items_count: Optional[int] = 0
 
 
 class CategoryStatusUpdate(BaseModel):

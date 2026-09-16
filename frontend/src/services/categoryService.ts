@@ -50,10 +50,12 @@ export const categoryService = {
   getCategories: async (
     page: number = 1,
     limit: number = 10,
-    search?: string
+    search?: string,
+    status?: string
   ): Promise<CategoryListResponse> => {
     const params: any = { page, limit };
     if (search) params.search = search;
+    if (status && status !== 'ALL') params.status = status;
 
     const response: AxiosResponse<CategoryListResponse> = await api.get('/categories', { params });
     return response.data;

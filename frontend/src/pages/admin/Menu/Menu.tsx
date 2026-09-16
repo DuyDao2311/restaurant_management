@@ -5,81 +5,6 @@ import { menuService } from '../../../services/menuService';
 import { categoryService } from '../../../services/categoryService';
 import { MenuItem, Category } from '../../../types';
 
-const mockMenuItems: MenuItem[] = [
-  {
-    id: 1,
-    category_id: 1,
-    code: '#WGY-001',
-    name: 'Bò Wagyu A5 Miyazaki Than Binchotan',
-    description: 'Thịt bò Wagyu vân mỡ cẩm thạch A5, muối...',
-    price: 2750000,
-    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: true,
-  },
-  {
-    id: 2,
-    category_id: 2,
-    code: '#SCL-014',
-    name: 'Sò Điệp Hokkaido Khói Trầm Hương',
-    description: 'Sò điệp tươi sống từ đảo Hokkaido, xông...',
-    price: 890000,
-    image: 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: true,
-  },
-  {
-    id: 3,
-    category_id: 2,
-    code: '#FOI-008',
-    name: 'Gan Ngỗng Béo Áp Chảo Sốt Vang Port',
-    description: 'Foie Gras nhập khẩu Pháp, bánh mì Brioch...',
-    price: 1150000,
-    image: 'https://images.unsplash.com/photo-1626082895617-2c6b4121d1ee?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: true,
-  },
-  {
-    id: 4,
-    category_id: 3,
-    code: '#LOB-022',
-    name: 'Tôm Hùm Nha Trang Nướng Bơ Tỏi Đen',
-    description: 'Tôm hùm bông loại 1, tỏi đen Lý Sơn lên m...',
-    price: 2450000,
-    image: 'https://images.unsplash.com/photo-1559742811-822873691df8?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: false,
-  },
-  {
-    id: 5,
-    category_id: 3,
-    code: '#TRF-005',
-    name: 'Nấm Truffle Trắng Alba Kèm Pasta Tươi',
-    description: 'Pasta Tagliolini tươi cán tay mỗi sáng, nấm...',
-    price: 1890000,
-    image: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: true,
-  },
-  {
-    id: 6,
-    category_id: 4,
-    code: '#DES-031',
-    name: 'Bánh Soufflé Grand Marnier',
-    description: 'Rượu mùi Grand Marnier hảo hạng, kem...',
-    price: 450000,
-    image: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?q=80&w=150&auto=format&fit=crop',
-    status: 'ACTIVE',
-    is_available: true,
-  }
-];
-
-const mockCategories: Category[] = [
-  { id: 1, name: 'Hải sản & Bò thượng hạng', status: 'ACTIVE' },
-  { id: 2, name: 'Khai vị', status: 'ACTIVE' },
-  { id: 3, name: 'Món chính', status: 'ACTIVE' },
-  { id: 4, name: 'Tráng miệng', status: 'ACTIVE' },
-];
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN').format(value);
@@ -96,16 +21,15 @@ const MenuPage = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Bật mock data tạm thời nếu API chưa có data để test UI
-      const fetchedCategories = await categoryService.getAllCategories().catch(() => mockCategories);
-      const fetchedItems = await menuService.getAllMenuItems().catch(() => mockMenuItems);
+      const categoryRes = await categoryService.getCategories(1, 100);
+      const fetchedCategories = categoryRes.data?.items || [];
 
-      setCategories(fetchedCategories.length ? fetchedCategories : mockCategories);
-      setItems(fetchedItems.length ? fetchedItems : mockMenuItems);
+      const fetchedItems = await menuService.getAllMenuItems();
+
+      setCategories(fetchedCategories);
+      setItems(fetchedItems);
     } catch (error) {
       console.error("Failed to load data, using mock data", error);
-      setCategories(mockCategories);
-      setItems(mockMenuItems);
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +47,7 @@ const MenuPage = () => {
     const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     // Optimistic Update
     setItems(prevItems => prevItems.map(item => item.id === id ? { ...item, status: newStatus } : item));
-    
+
     try {
       await menuService.updateMenuItem(id, { status: newStatus });
     } catch (error) {
@@ -259,7 +183,7 @@ const MenuPage = () => {
                     <div className="text-base text-gray-900">{formatCurrency(item.price)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button 
+                    <button
                       onClick={async () => {
                         const newAvailable = !item.is_available;
                         setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: newAvailable } : i));
@@ -270,16 +194,16 @@ const MenuPage = () => {
                         }
                       }}
                       className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border hover:opacity-80 transition-opacity focus:outline-none ${item.is_available
-                      ? 'bg-gray-50 text-gray-700 border-gray-200'
-                      : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
+                        ? 'bg-gray-50 text-gray-700 border-gray-200'
+                        : 'bg-red-50 text-red-700 border-red-200'
+                        }`}>
                       <span className={`h-1.5 w-1.5 rounded-full mr-2 ${item.is_available ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
                       {item.is_available ? 'Còn hàng' : 'Hết hàng'}
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                     <div className="flex items-center justify-center space-x-3">
-                      <button 
+                      <button
                         onClick={() => setViewItem(item)}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                       >
@@ -320,9 +244,9 @@ const MenuPage = () => {
                 <span aria-hidden="true">&lt;</span>
               </button>
               {Array.from({ length: Math.max(1, Math.ceil(items.length / 10)) }).map((_, i) => (
-                <button 
-                  key={i} 
-                  aria-current={i === 0 ? "page" : undefined} 
+                <button
+                  key={i}
+                  aria-current={i === 0 ? "page" : undefined}
                   className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === 0 ? 'z-10 bg-black text-white border-black' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}
                 >
                   {i + 1}
@@ -345,28 +269,28 @@ const MenuPage = () => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
             {viewItem.image ? (
-               <img src={viewItem.image} alt={viewItem.name} className="w-full md:w-1/2 h-64 md:h-auto object-cover" />
+              <img src={viewItem.image} alt={viewItem.name} className="w-full md:w-1/2 h-64 md:h-auto object-cover" />
             ) : (
-               <div className="w-full md:w-1/2 h-64 md:h-auto bg-gray-100 flex items-center justify-center text-gray-400">Không có ảnh</div>
+              <div className="w-full md:w-1/2 h-64 md:h-auto bg-gray-100 flex items-center justify-center text-gray-400">Không có ảnh</div>
             )}
             <div className="p-8 md:w-1/2 flex flex-col">
-               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                 {categories.find(c => c.id === viewItem.category_id)?.name || 'Danh mục trống'}
-               </span>
-               <h3 className="text-2xl font-serif text-gray-900 mb-1 leading-tight">{viewItem.name}</h3>
-               <p className="text-gray-500 text-sm mb-6">{viewItem.code}</p>
-               <div className="text-xl font-medium text-gray-900 mb-6">{formatCurrency(viewItem.price)} VNĐ</div>
-               <div className="flex-1 overflow-y-auto pr-2">
-                 <p className="text-gray-600 text-sm leading-relaxed">{viewItem.description || 'Chưa có mô tả cho món ăn này.'}</p>
-               </div>
-               <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end gap-3">
-                 <button onClick={() => { setViewItem(null); navigate('/admin/menu/edit/' + viewItem.id); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                   Chỉnh sửa
-                 </button>
-                 <button onClick={() => setViewItem(null)} className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800">
-                   Đóng
-                 </button>
-               </div>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                {categories.find(c => c.id === viewItem.category_id)?.name || 'Danh mục trống'}
+              </span>
+              <h3 className="text-2xl font-serif text-gray-900 mb-1 leading-tight">{viewItem.name}</h3>
+              <p className="text-gray-500 text-sm mb-6">{viewItem.code}</p>
+              <div className="text-xl font-medium text-gray-900 mb-6">{formatCurrency(viewItem.price)} VNĐ</div>
+              <div className="flex-1 overflow-y-auto pr-2">
+                <p className="text-gray-600 text-sm leading-relaxed">{viewItem.description || 'Chưa có mô tả cho món ăn này.'}</p>
+              </div>
+              <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button onClick={() => { setViewItem(null); navigate('/admin/menu/edit/' + viewItem.id); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                  Chỉnh sửa
+                </button>
+                <button onClick={() => setViewItem(null)} className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800">
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         </div>

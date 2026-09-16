@@ -56,17 +56,17 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Customers', path: '/admin/customers', icon: Users },
       { label: 'Staff', path: '/admin/staff', icon: UserCog },
-      { label: 'Promotions', path: '/admin/promotions', icon: BadgePercent },
+
     ],
   },
-  {
-    title: 'SYSTEM',
-    items: [
-      { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
-      { label: 'Notifications', path: '/admin/notifications', icon: Bell },
-      { label: 'Settings', path: '/admin/settings', icon: Settings },
-    ],
-  },
+  // {
+  //   title: 'SYSTEM',
+  //   items: [
+  //     { label: 'Reports', path: '/admin/reports', icon: BarChart3 },
+  //     { label: 'Notifications', path: '/admin/notifications', icon: Bell },
+  //     { label: 'Settings', path: '/admin/settings', icon: Settings },
+  //   ],
+  // },
 ];
 
 const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
