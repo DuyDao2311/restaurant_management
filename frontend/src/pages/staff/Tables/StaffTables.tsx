@@ -102,9 +102,13 @@ const StaffTables = () => {
 
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-end">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Table Management</h1>
-          <p className="text-gray-500 mt-1">Monitor and manage restaurant tables.</p>
+        <div className="mb-2">
+          <h1 className="text-3xl font-normal text-slate-900 mb-2 flex items-center justify-between" style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}>
+            Quản Lý Bàn Ăn
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Theo dõi và quản lý tình trạng bàn của nhà hàng
+          </p>
         </div>
 
         {/* Quick Stats */}
@@ -125,44 +129,40 @@ const StaffTables = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <div className="relative w-full sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] sm:text-sm transition-colors"
+              placeholder="Tìm kiếm mã bàn..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-            placeholder="Tìm kiếm mã bàn..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
         </div>
 
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:min-w-[200px]">
-            <select
-              className="block w-full pl-3 pr-10 py-2.5 text-base font-medium text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg appearance-none border bg-white cursor-pointer transition-all hover:bg-gray-50"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="AVAILABLE">Trống</option>
-              <option value="OCCUPIED">Có khách</option>
-              <option value="RESERVED">Đã đặt</option>
-              <option value="MAINTENANCE">Bảo trì</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-              <ChevronDown className="h-4 w-4" />
-            </div>
-          </div>
-
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <select
+            className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="AVAILABLE">Trống</option>
+            <option value="OCCUPIED">Có khách</option>
+            <option value="RESERVED">Đã đặt</option>
+            <option value="MAINTENANCE">Bảo trì</option>
+          </select>
           <button
             onClick={fetchTables}
-            className="p-2.5 border border-gray-300 shadow-sm rounded-lg text-gray-500 bg-white hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            className="p-2.5 border border-gray-200 shadow-sm rounded-lg text-gray-500 bg-white hover:bg-gray-50 focus:outline-none transition-colors"
             title="Tải lại"
           >
-            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin text-blue-500' : ''}`} />
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>

@@ -11,9 +11,11 @@ import { Order } from '../../../types/order.types';
 import { RestaurantTable } from '../../../types/table';
 import { TableSession } from '../../../types/table_session.types';
 import OrderDetailModal from '../../admin/Orders/OrderDetailModal';
+import { useToast } from '../../../context/ToastContext';
 
 const StaffOrders = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [activeSession, setActiveSession] = useState<TableSession | null>(null);
@@ -118,7 +120,7 @@ const StaffOrders = () => {
 
     const uncompleted = orders.filter(o => !['COMPLETED', 'CANCELLED'].includes(o.status));
     if (uncompleted.length > 0) {
-      alert('Không thể đóng phiên vì vẫn còn Order chưa hoàn thành.');
+      showToast('Không thể đóng phiên vì vẫn còn Order chưa hoàn thành.', 'warning');
       return;
     }
 
@@ -128,11 +130,11 @@ const StaffOrders = () => {
 
     try {
       await tableSessionService.closeSession(activeSession.id);
-      alert('Đóng phiên bàn thành công.');
+      showToast('Đóng phiên bàn thành công.', 'success');
       refreshCurrentSession();
       fetchTables();
     } catch (error: any) {
-      alert(error?.response?.data?.detail || 'Không thể đóng phiên.');
+      showToast(error?.response?.data?.detail || 'Không thể đóng phiên.', 'error');
     }
   };
 
@@ -173,7 +175,7 @@ const StaffOrders = () => {
       setSelectedOrder(orderData);
     } catch (error) {
       console.error('Failed to fetch order details:', error);
-      alert('Không thể tải chi tiết đơn hàng.');
+      showToast('Không thể tải chi tiết đơn hàng.', 'error');
     }
   };
 
@@ -238,10 +240,10 @@ const StaffOrders = () => {
 
   const translateTableStatus = (status: string) => {
     switch (status) {
-      case 'OCCUPIED': return 'OCCUPIED';
-      case 'RESERVED': return 'RESERVED';
-      case 'AVAILABLE': return 'AVAILABLE';
-      case 'MAINTENANCE': return 'MAINTENANCE';
+      case 'OCCUPIED': return 'Đang phục vụ';
+      case 'RESERVED': return 'Đã đặt';
+      case 'AVAILABLE': return 'Sẵn sàng';
+      case 'MAINTENANCE': return 'Bảo trì';
       default: return status;
     }
   };

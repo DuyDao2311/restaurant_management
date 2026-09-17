@@ -14,7 +14,7 @@ from app.models import (
 )
 from app.core.database import Base
 
-from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions, admin_staff
+from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions, admin_staff, notifications
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,6 +22,11 @@ app = FastAPI(
     title="Restaurant Management API",
     version="1.0.0"
 )
+
+# Import và cấu hình Socket.IO
+import socketio
+from app.core.socket_manager import sio
+app.mount("/socket.io", socketio.ASGIApp(sio))
 
 # Cấu hình CORS để cho phép Frontend React gọi API
 app.add_middleware(
@@ -117,6 +122,12 @@ app.include_router(
     table_sessions.router,
     prefix="/api",
     tags=["Table Sessions"]
+)
+
+app.include_router(
+    notifications.router,
+    prefix="/api/notifications",
+    tags=["Notifications"]
 )
 
 # ==================== Health Check Endpoints ====================

@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext, type ReactNode } from 'react';
 import authService from '../services/authService';
+import { connectSocket, disconnectSocket, getSocket } from '../services/socket';
 import type { User, LoginResponse, AuthContextType } from '../types';
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,6 +36,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     checkAuth();
   }, [token]);
+
+  // Manage socket connection based on authentication state
+  useEffect(() => {
+    if (isAuthenticated) {
+      const socket = connectSocket();
+      
+      if (socket) {
+        // Register event listener for notifications (temporary log)
+        const handleNewNotification = (data: any) => {
+          console.log('[Socket] New Notification Received:', data);
+        };
+        
+        socket.on('notification:new', handleNewNotification);
+        
+        return () => {
+          socket.off('notification:new', handleNewNotification);
+        };
+      }
+    } else {
+      disconnectSocket();
+    }
+  }, [isAuthenticated]);
 
   const login = async (phone: string, password: string): Promise<LoginResponse> => {
     const data = await authService.login(phone, password);

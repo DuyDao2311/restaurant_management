@@ -4,9 +4,11 @@ import { ArrowLeft, Check, RefreshCw, Save } from 'lucide-react';
 import { menuService } from '../../../services/menuService';
 import { categoryService } from '../../../services/categoryService';
 import { Category } from '../../../types';
+import { useToast } from '../../../context/ToastContext';
 
 const NewDishPage = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Form State
@@ -27,8 +29,8 @@ const NewDishPage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await categoryService.getAllCategories();
-        setCategories(data);
+        const response = await categoryService.getCategories(1, 100);
+        setCategories(response.data.items);
       } catch (error) {
         console.error('Lỗi khi tải danh mục', error);
       }
@@ -51,7 +53,7 @@ const NewDishPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !categoryId || !price) {
-      alert("Vui lòng điền đầy đủ các trường bắt buộc (*)");
+      showToast("Vui lòng điền đầy đủ các trường bắt buộc (*)", 'warning');
       return;
     }
 
@@ -70,7 +72,7 @@ const NewDishPage = () => {
       navigate('/admin/menu');
     } catch (error) {
       console.error('Lỗi khi thêm món', error);
-      alert('Đã có lỗi xảy ra khi thêm món.');
+      showToast('Đã có lỗi xảy ra khi thêm món.', 'error');
     } finally {
       setIsSubmitting(false);
     }

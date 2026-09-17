@@ -7,8 +7,10 @@ import CategoryFormModal from './CategoryFormModal';
 import DeleteCategoryModal from './DeleteCategoryModal';
 import CategoryDetailModal from './CategoryDetailModal';
 import Pagination from '../../../components/common/Pagination';
+import { useToast } from '../../../context/ToastContext';
 
 const Categories = () => {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState<PaginationType>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [isLoading, setIsLoading] = useState(true);
@@ -111,9 +113,9 @@ const Categories = () => {
       }
     } catch (err: any) {
       if (err.response?.status === 404) {
-        alert('Category không tồn tại hoặc đã bị xóa.');
+        showToast('Category không tồn tại hoặc đã bị xóa.', 'error');
       } else {
-        alert('Không thể tải thông tin Category. Vui lòng thử lại.');
+        showToast('Không thể tải thông tin Category. Vui lòng thử lại.', 'error');
       }
     }
   };
@@ -123,10 +125,10 @@ const Categories = () => {
     try {
       if (selectedCategory) {
         await categoryService.updateCategory(selectedCategory.id, data as UpdateCategoryData);
-        alert('Cập nhật Category thành công');
+        showToast('Cập nhật Category thành công', 'success');
       } else {
         await categoryService.createCategory(data as CreateCategoryData);
-        alert('Thêm Category thành công');
+        showToast('Thêm Category thành công', 'success');
       }
       setIsFormModalOpen(false);
       fetchCategories();
@@ -154,7 +156,7 @@ const Categories = () => {
         );
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái Category');
+      showToast(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái Category', 'error');
     } finally {
       setStatusLoadingId(null);
     }
@@ -170,7 +172,7 @@ const Categories = () => {
     setIsDeleting(true);
     try {
       await categoryService.deleteCategory(categoryToDelete.id);
-      alert('Xóa Category thành công');
+      showToast('Xóa Category thành công', 'success');
       setIsDeleteModalOpen(false);
       setCategoryToDelete(null);
 
@@ -181,7 +183,7 @@ const Categories = () => {
         fetchCategories();
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi xóa Category');
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi xóa Category', 'error');
       setIsDeleteModalOpen(false);
       setCategoryToDelete(null);
     } finally {
@@ -195,7 +197,6 @@ const Categories = () => {
       <div className="mb-2">
         <h1 className="text-3xl font-normal text-slate-900 mb-2 flex items-center justify-between" style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}>
           Danh Mục Thực Đơn
-          <span className="text-gray-400 border border-gray-200 rounded-full w-5 h-5 flex items-center justify-center text-xs font-sans">i</span>
         </h1>
         <p className="text-gray-500 text-sm">
           Hệ thống phân tầng danh mục ẩm thực chuẩn Fine Dining của RESTAURANT
@@ -229,7 +230,7 @@ const Categories = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
@@ -238,7 +239,7 @@ const Categories = () => {
             <option value="ACTIVE">Đang phục vụ (Active)</option>
             <option value="INACTIVE">Ngừng phục vụ (Inactive)</option>
           </select>
-          <select 
+          <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"

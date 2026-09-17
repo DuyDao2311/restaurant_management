@@ -2,6 +2,7 @@ import { X, Clock, MapPin, CheckCircle, Package } from 'lucide-react';
 import { Order } from '../../../types/order.types';
 import { orderService } from '../../../services/orderService';
 import { useState } from 'react';
+import { useToast } from '../../../context/ToastContext';
 
 interface OrderDetailModalProps {
   order: Order;
@@ -13,6 +14,7 @@ const STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED', 'COMPL
 
 const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const { showToast } = useToast();
 
   const handleStatusChange = async (newStatus: string) => {
     setIsUpdating(true);
@@ -20,7 +22,7 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
       const updated = await orderService.updateOrderStatus(order.id, { status: newStatus });
       onStatusUpdated(updated);
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Cập nhật trạng thái thất bại");
+      showToast(error?.response?.data?.detail || "Cập nhật trạng thái thất bại", 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -32,9 +34,9 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
     try {
       const updated = await orderService.cancelOrder(order.id);
       onStatusUpdated(updated);
-      alert("Hủy Order thành công");
+      showToast("Hủy Order thành công", 'success');
     } catch (error: any) {
-      alert(error?.response?.data?.detail || "Hủy Order thất bại");
+      showToast(error?.response?.data?.detail || "Hủy Order thất bại", 'error');
     } finally {
       setIsUpdating(false);
     }

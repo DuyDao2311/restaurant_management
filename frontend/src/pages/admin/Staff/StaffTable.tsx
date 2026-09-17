@@ -66,7 +66,7 @@ const StaffTable = ({ staffList, onView, onEdit, onToggleStatus, onDelete }: Sta
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {staff.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      {staff.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">{formatDate(staff.created_at)}</td>

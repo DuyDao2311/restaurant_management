@@ -8,6 +8,7 @@ import { tableSessionService } from '../../../services/tableSessionService';
 import { MenuItem } from '../../../types';
 import { RestaurantTable } from '../../../types/table';
 import { TableSession } from '../../../types/table_session.types';
+import { useToast } from '../../../context/ToastContext';
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -16,6 +17,7 @@ interface CartItem extends MenuItem {
 
 const StaffCreateOrder = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
@@ -107,11 +109,11 @@ const StaffCreateOrder = () => {
 
   const handleCreateOrder = async () => {
     if (!activeSession) {
-      alert("Bàn này chưa có phiên hoạt động.");
+      showToast("Bàn này chưa có phiên hoạt động.", 'warning');
       return;
     }
     if (cart.length === 0) {
-      alert("Vui lòng thêm món ăn vào giỏ hàng.");
+      showToast("Vui lòng thêm món ăn vào giỏ hàng.", 'warning');
       return;
     }
 
@@ -126,11 +128,11 @@ const StaffCreateOrder = () => {
           note: item.note
         }))
       });
-      alert("Tạo đơn hàng thành công!");
+      showToast("Tạo đơn hàng thành công!", 'success');
       navigate('/staff/orders');
     } catch (err: any) {
       console.error(err);
-      alert(err?.response?.data?.detail || "Tạo đơn hàng thất bại");
+      showToast(err?.response?.data?.detail || "Tạo đơn hàng thất bại", 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -217,7 +219,7 @@ const StaffCreateOrder = () => {
                 {filteredMenu.map(item => (
                   <div 
                     key={item.id} 
-                    onClick={() => activeSession ? addToCart(item) : alert('Vui lòng chọn bàn có phiên hoạt động trước')}
+                    onClick={() => activeSession ? addToCart(item) : showToast('Vui lòng chọn bàn có phiên hoạt động trước', 'warning')}
                     className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all group ${activeSession ? 'cursor-pointer hover:shadow-md hover:border-indigo-300' : 'opacity-50 cursor-not-allowed'}`}
                   >
                     <div className="h-32 bg-gray-100 relative overflow-hidden">

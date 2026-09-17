@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminLayout from './components/layout/AdminLayout';
 import StaffLayout from './components/layout/StaffLayout';
@@ -38,7 +40,9 @@ import StaffReservationsPage from './pages/staff/Reservations/Reservations';
 function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
+        <NotificationProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
@@ -80,13 +84,16 @@ function App() {
               <Route path="reservations" element={<StaffReservationsPage />} />
               <Route path="orders" element={<StaffOrdersPage />} />
               <Route path="orders/create" element={<StaffCreateOrderPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
 
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </NotificationProvider>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

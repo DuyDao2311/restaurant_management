@@ -89,70 +89,59 @@ const Reservations: React.FC = () => {
 
   return (
     <div className="p-6 md:p-8 bg-[#F9FAFB] min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-serif text-slate-900 mb-2 font-medium tracking-tight">Quản Lý Đặt Bàn</h1>
-        <p className="text-gray-500 text-[15px]">Điều phối, phê duyệt và theo dõi lịch đặt bàn.</p>
+      {/* Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-normal text-slate-900 mb-2 flex items-center justify-between" style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}>
+          Quản Lý Đặt Bàn
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Điều phối, phê duyệt và theo dõi lịch đặt bàn
+        </p>
       </div>
 
-      <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 md:p-8 mb-8">
-        <div className="flex flex-wrap gap-6 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Lọc theo trạng thái</label>
-            <div className="relative">
-              <select
-                className="w-full appearance-none border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-700 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all font-medium cursor-pointer"
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="PENDING">PENDING</option>
-                <option value="CONFIRMED">CONFIRMED</option>
-                <option value="CHECKED_IN">CHECKED_IN</option>
-                <option value="CANCELLED">CANCELLED</option>
-                <option value="REJECTED">REJECTED</option>
-                <option value="NO_SHOW">NO_SHOW</option>
-                <option value="COMPLETED">COMPLETED</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-              </div>
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <div className="relative w-full sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
             </div>
-          </div>
-
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Lọc theo ngày</label>
             <input
-              type="date"
-              className="w-full border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-700 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all font-medium cursor-pointer"
-              value={dateFilter}
-              onChange={(e) => { setDateFilter(e.target.value); setPage(1); }}
+              type="text"
+              placeholder="VD: 1, 2, Bàn 5, VIP..."
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] sm:text-sm transition-colors"
+              value={tableFilter}
+              onChange={(e) => { setTableFilter(e.target.value); setPage(1); }}
             />
           </div>
+        </div>
 
-          <div className="flex-[1.5] min-w-[250px]">
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Lọc theo mã bàn</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-              </div>
-              <input
-                type="text"
-                placeholder="VD: 1, 2, Bàn 5, VIP..."
-                className="w-full border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-700 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all font-medium"
-                value={tableFilter}
-                onChange={(e) => { setTableFilter(e.target.value); setPage(1); }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => { setStatusFilter(''); setDateFilter(''); setTableFilter(''); setPage(1); }}
-              className="h-[52px] px-8 border border-gray-200 text-gray-600 rounded-2xl hover:bg-gray-50 flex items-center gap-2 transition-all font-bold text-sm bg-white shadow-sm"
-            >
-              <Filter className="w-4 h-4" /> Xóa Lọc
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <select
+            className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ xử lý</option>
+            <option value="CONFIRMED">Đã xác nhận</option>
+            <option value="CHECKED_IN">Đã nhận bàn</option>
+            <option value="CANCELLED">Đã hủy</option>
+            <option value="REJECTED">Đã từ chối</option>
+            <option value="NO_SHOW">Không đến</option>
+            <option value="COMPLETED">Hoàn thành</option>
+          </select>
+          <input
+            type="date"
+            className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
+            value={dateFilter}
+            onChange={(e) => { setDateFilter(e.target.value); setPage(1); }}
+          />
+          <button
+            onClick={() => { setStatusFilter(''); setDateFilter(''); setTableFilter(''); setPage(1); }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Filter className="w-4 h-4" /> Xóa Lọc
+          </button>
         </div>
       </div>
 
@@ -218,17 +207,21 @@ const Reservations: React.FC = () => {
                       {res.status === 'CONFIRMED' ? (
                         <div className="inline-flex items-center gap-2 border border-blue-200 bg-blue-50/50 text-blue-600 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                          CONFIRMED
+                          ĐÃ XÁC NHẬN
                         </div>
                       ) : res.status === 'PENDING' ? (
                         <div className="inline-flex items-center gap-2 border border-amber-200 bg-amber-50/50 text-amber-500 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                          PENDING
+                          CHỜ XỬ LÝ
                         </div>
                       ) : (
                         <div className="inline-flex items-center gap-2 border border-gray-200 bg-gray-50/50 text-gray-500 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider">
                           <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                          {res.status}
+                          {res.status === 'CHECKED_IN' ? 'ĐÃ NHẬN BÀN' : 
+                           res.status === 'CANCELLED' ? 'ĐÃ HỦY' : 
+                           res.status === 'REJECTED' ? 'ĐÃ TỪ CHỐI' : 
+                           res.status === 'NO_SHOW' ? 'KHÔNG ĐẾN' : 
+                           res.status === 'COMPLETED' ? 'HOÀN THÀNH' : res.status}
                         </div>
                       )}
                     </td>

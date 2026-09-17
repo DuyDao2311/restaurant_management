@@ -7,6 +7,7 @@ from app.schemas.reservation import ReservationCreate, ReservationLookupRequest
 from fastapi import HTTPException, status
 from typing import List, Tuple, Optional
 import logging
+from app.services.notification_service import notify_reservation_created
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,9 @@ def create_reservation(db: Session, reservation_data: ReservationCreate) -> Rese
             db.add(new_reservation)
             db.commit()
             db.refresh(new_reservation)
+            
+            # Send notification to Admin and Staff
+            notify_reservation_created(db, new_reservation)
             
             return new_reservation
             

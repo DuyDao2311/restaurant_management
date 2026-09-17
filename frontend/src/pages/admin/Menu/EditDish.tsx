@@ -4,10 +4,12 @@ import { ArrowLeft, Check, RefreshCw, Save } from 'lucide-react';
 import { menuService } from '../../../services/menuService';
 import { categoryService } from '../../../services/categoryService';
 import { Category } from '../../../types';
+import { useToast } from '../../../context/ToastContext';
 
 const EditDishPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -23,8 +25,8 @@ const EditDishPage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await categoryService.getAllCategories();
-        setCategories(data);
+        const response = await categoryService.getCategories(1, 100);
+        setCategories(response.data.items);
       } catch (error) {
         console.error('Lỗi khi tải danh mục', error);
       }
@@ -42,7 +44,7 @@ const EditDishPage = () => {
         setPrice(data.price ? data.price.toString() : '');
       } catch (error) {
         console.error('Lỗi khi tải thông tin món ăn', error);
-        alert('Không tìm thấy thông tin món ăn!');
+        showToast('Không tìm thấy thông tin món ăn!', 'error');
         navigate('/admin/menu');
       } finally {
         setIsLoading(false);
@@ -73,7 +75,7 @@ const EditDishPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !categoryId || !price) {
-      alert("Vui lòng điền đầy đủ các trường bắt buộc (*)");
+      showToast("Vui lòng điền đầy đủ các trường bắt buộc (*)", 'warning');
       return;
     }
 
@@ -90,7 +92,7 @@ const EditDishPage = () => {
       navigate('/admin/menu');
     } catch (error) {
       console.error('Lỗi khi cập nhật món', error);
-      alert('Đã có lỗi xảy ra khi cập nhật món.');
+      showToast('Đã có lỗi xảy ra khi cập nhật món.', 'error');
     } finally {
       setIsSubmitting(false);
     }

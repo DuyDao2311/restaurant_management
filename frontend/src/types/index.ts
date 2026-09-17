@@ -92,3 +92,40 @@ export interface MenuItem {
   updated_at?: string;
   category?: Category; // For frontend display
 }
+
+// ==================== Notification ====================
+
+export const NotificationTypeEnum = {
+  RESERVATION_CREATED: 'RESERVATION_CREATED',
+} as const;
+
+export type NotificationType = typeof NotificationTypeEnum[keyof typeof NotificationTypeEnum];
+
+export interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: NotificationType | string;
+  reference_id: number | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: Notification[];
+  total_count: number;
+  unread_count: number;
+}
+
+export interface NotificationContextType {
+  notifications: Notification[];
+  unreadCount: number;
+  loading: boolean;
+  hasMore: boolean;
+  filter: 'ALL' | 'UNREAD';
+  setFilter: (filter: 'ALL' | 'UNREAD') => void;
+  fetchNotifications: (reset?: boolean) => Promise<void>;
+  loadMore: () => Promise<void>;
+  markAsRead: (id: number) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+}

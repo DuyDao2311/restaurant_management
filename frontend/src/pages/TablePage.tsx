@@ -5,10 +5,12 @@ import { AlertCircle, RefreshCw, Bell, Wifi, ArrowRight } from 'lucide-react';
 import { tableService } from '../services/tableService';
 import { staffCallService } from '../services/staffCallService';
 import { TablePublicQRResponse } from '../types/table';
+import { useToast } from '../context/ToastContext';
 
 const TablePage = () => {
   const { qrToken } = useParams<{ qrToken: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [table, setTable] = useState<TablePublicQRResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorType, setErrorType] = useState<'INVALID' | 'NETWORK' | null>(null);
@@ -25,14 +27,14 @@ const TablePage = () => {
       await staffCallService.createCall(table.table_id, 'CALL_STAFF');
       setHasPendingCall(true);
       setShowCallModal(false);
-      alert('Đã gọi nhân viên thành công. Vui lòng đợi trong giây lát!');
+      showToast('Đã gọi nhân viên thành công. Vui lòng đợi trong giây lát!', 'success');
     } catch (error: any) {
       if (error.response?.status === 400) {
-        alert(error.response.data.detail);
+        showToast(error.response.data.detail, 'warning');
         setHasPendingCall(true);
         setShowCallModal(false);
       } else {
-        alert('Có lỗi xảy ra, vui lòng thử lại sau.');
+        showToast('Có lỗi xảy ra, vui lòng thử lại sau.', 'error');
       }
     } finally {
       setIsCalling(false);

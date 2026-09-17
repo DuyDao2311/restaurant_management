@@ -59,25 +59,35 @@ const MenuPage = () => {
 
   return (
     <div className="p-6 h-full flex flex-col bg-gray-50/50">
+      {/* Title */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-normal text-slate-900 mb-2 flex items-center justify-between" style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}>
+          Quản lý Thực Đơn
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Quản lý danh sách món ăn, giá cả và trạng thái phục vụ
+        </p>
+      </div>
 
-      {/* Header Actions */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-md shadow-sm border border-gray-200 mb-4">
-
-        <div className="flex items-center space-x-4 flex-1 max-w-2xl mr-4">
+      {/* Filters and Search */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
           <button
             onClick={() => navigate('/admin/menu/new')}
-            className="flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-bold rounded-md text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black whitespace-nowrap uppercase"
+            className="flex items-center justify-center gap-2 text-white px-5 py-2.5 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider whitespace-nowrap w-full sm:w-auto"
+            style={{ backgroundColor: '#B4975A' }}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus size={16} strokeWidth={2.5} />
             Thêm món mới
           </button>
-          <div className="relative flex-1">
+
+          <div className="relative w-full sm:w-80">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+              <Search size={16} className="text-gray-400" />
             </div>
             <input
               type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] sm:text-sm transition-colors"
               placeholder="Tìm theo tên món, mã món, hoặc nguyên liệu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -85,38 +95,27 @@ const MenuPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            {/* <span className="text-sm font-medium text-gray-700 uppercase">Trạng thái:</span> */}
-            <div className="relative">
-              <select className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md appearance-none border bg-white">
-                <option>Tất cả trạng thái</option>
-                <option>Còn hàng</option>
-                <option>Hết hàng</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                <ChevronDown className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
-
-          <div className="relative">
-            <select className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md appearance-none border bg-white">
-              <option value="">Tất cả các món ăn</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-              <ChevronDown className="h-4 w-4" />
-            </div>
-          </div>
-
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <select
+            className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
+          >
+            <option>Tất cả trạng thái</option>
+            <option>Còn hàng</option>
+            <option>Hết hàng</option>
+          </select>
+          <select
+            className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
+          >
+            <option value="">Tất cả các món ăn</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
           <button
             onClick={fetchData}
-            className="p-2 border border-gray-300 shadow-sm rounded-md text-gray-500 bg-white hover:bg-gray-50 focus:outline-none"
+            className="p-2.5 border border-gray-200 shadow-sm rounded-lg text-gray-500 bg-white hover:bg-gray-50 focus:outline-none transition-colors"
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw size={16} />
           </button>
         </div>
       </div>

@@ -128,7 +128,7 @@ const CategoryTable = ({
                         }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${category.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                      {category.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      {category.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
                     </span>
                   </td>
                   <td className="px-6 py-6 text-center text-gray-500 text-sm">{formatDate(category.created_at)}</td>

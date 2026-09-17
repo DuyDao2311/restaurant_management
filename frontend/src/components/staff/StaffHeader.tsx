@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, User, Bell, CheckCircle } from 'lucide-react';
+import { Menu, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { staffCallService, StaffCall } from '../../services/staffCallService.ts';
 import { tableService } from '../../services/tableService.ts';
 import { RestaurantTable } from '../../types/table.ts';
+import NotificationBell from '../common/NotificationBell';
+import { useToast } from '../../context/ToastContext';
 
 interface StaffHeaderProps {
   onToggleSidebar: () => void;
@@ -19,10 +21,9 @@ const pageTitleMap: Record<string, string> = {
 const StaffHeader = ({ onToggleSidebar }: StaffHeaderProps) => {
   const { user } = useAuth();
   const location = useLocation();
+  const { showToast } = useToast();
   const [calls, setCalls] = useState<StaffCall[]>([]);
   const [tables, setTables] = useState<Record<number, string>>({});
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchCalls = async () => {
     try {
@@ -57,22 +58,12 @@ const StaffHeader = ({ onToggleSidebar }: StaffHeaderProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleCompleteCall = async (id: number) => {
     try {
       await staffCallService.updateStatus(id, 'COMPLETED');
       setCalls(calls.filter(c => c.id !== id));
     } catch (error) {
-      alert('Lỗi cập nhật yêu cầu');
+      showToast('Lỗi cập nhật yêu cầu', 'error');
     }
   };
 
@@ -96,63 +87,12 @@ const StaffHeader = ({ onToggleSidebar }: StaffHeaderProps) => {
 
       {/* Right side - User info & Notifications */}
       <div className="flex items-center gap-4">
-
-        {/* Notifications Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
-          >
-            <Bell size={20} className="text-gray-600" />
-            {calls.length > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                {calls.length}
-              </span>
-            )}
-          </button>
-
-          {showDropdown && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800 text-sm">Yêu cầu gọi nhân viên</h3>
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{calls.length} mới</span>
-              </div>
-
-              <div className="max-h-80 overflow-y-auto">
-                {calls.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500 text-sm">
-                    Không có yêu cầu nào
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-50">
-                    {calls.map(call => (
-                      <div key={call.id} className="p-4 hover:bg-gray-50 transition-colors flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-gray-900 text-sm">
-                              Bàn {tables[call.table_id] || call.table_id}
-                            </span>
-                            <span className="text-[10px] text-gray-500">
-                              {new Date(call.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600">Đang gọi phục vụ...</p>
-                        </div>
-                        <button
-                          onClick={() => handleCompleteCall(call.id)}
-                          className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
-                          title="Đã xử lý"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        
+        <NotificationBell 
+          calls={calls}
+          tables={tables}
+          onCompleteCall={handleCompleteCall}
+        />
 
         {/* User info */}
         <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
