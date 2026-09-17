@@ -26,3 +26,7 @@ class Payment(Base):
 
     # Relationships
     order = relationship("Order", back_populates="payments")
+
+    @property
+    def order_code(self):
+        return self.order.order_code if self.order else None

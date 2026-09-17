@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Khởi tạo Socket.IO Async Server
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_allowed_origins=[]
 )
 
 @sio.on('connect')

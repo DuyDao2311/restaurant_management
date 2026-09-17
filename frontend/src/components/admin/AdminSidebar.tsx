@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Users,
   UserCog,
+  CreditCard,
   BadgePercent,
   BarChart3,
   Bell,
@@ -49,6 +50,7 @@ const navSections: NavSection[] = [
       { label: 'Tables', path: '/admin/tables', icon: Table },
       { label: 'Reservations', path: '/admin/reservations', icon: CalendarDays },
       { label: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+      { label: 'Payments', path: '/admin/payments', icon: CreditCard },
     ],
   },
   {

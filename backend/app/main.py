@@ -14,7 +14,7 @@ from app.models import (
 )
 from app.core.database import Base
 
-from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions, admin_staff, notifications
+from app.routers import auth, roles, users, tables, categories, menu, menu_items, orders, staff_calls, reservations, admin_reservations, staff_reservations, table_sessions, admin_staff, notifications, dashboard, payments
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -128,6 +128,18 @@ app.include_router(
     notifications.router,
     prefix="/api/notifications",
     tags=["Notifications"]
+)
+
+app.include_router(
+    dashboard.router,
+    prefix="/api/admin",
+    tags=["Dashboard"]
+)
+
+app.include_router(
+    payments.router,
+    prefix="/api",
+    tags=["Payments"]
 )
 
 # ==================== Health Check Endpoints ====================

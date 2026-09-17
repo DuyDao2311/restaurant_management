@@ -7,6 +7,7 @@ import {
   LogOut,
   Calendar,
   Utensils,
+  CreditCard,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
@@ -29,17 +30,12 @@ interface StaffSidebarProps {
 
 const navSections: NavSection[] = [
   {
-    title: 'MAIN',
-    items: [
-      { label: 'Dashboard', path: '/staff/dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
     title: 'OPERATIONS',
     items: [
       { label: 'Tables', path: '/staff/tables', icon: Table },
       { label: 'Reservations', path: '/staff/reservations', icon: Calendar },
       { label: 'Orders', path: '/staff/orders', icon: ShoppingCart },
+      { label: 'Payments', path: '/staff/payments', icon: CreditCard },
     ],
   },
 ];

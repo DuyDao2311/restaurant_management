@@ -50,7 +50,7 @@ const Login = () => {
     if (user?.role?.toUpperCase() === 'CUSTOMER') {
       return <Navigate to="/" replace />;
     } else if (user?.role?.toUpperCase() === 'STAFF') {
-      return <Navigate to="/staff/dashboard" replace />;
+      return <Navigate to="/staff/reservations" replace />;
     }
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -65,7 +65,7 @@ const Login = () => {
       if (result.user.role?.toUpperCase() === 'CUSTOMER') {
         navigate('/');
       } else if (result.user.role?.toUpperCase() === 'STAFF') {
-        navigate('/staff/dashboard');
+        navigate('/staff/reservations');
       } else {
         navigate('/admin/dashboard');
       }

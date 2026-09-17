@@ -2,15 +2,18 @@ import api from './api';
 import { MenuItem } from '../types';
 
 export const menuService = {
-  // Lấy danh sách món ăn
-  getAllMenuItems: async (): Promise<MenuItem[]> => {
+  getAllMenuItems: async (params?: { page?: number; limit?: number; category_id?: number; status?: string; search?: string }): Promise<{ items: MenuItem[]; total: number; total_pages: number }> => {
     try {
-      const response = await api.get('/menu-items');
+      const response = await api.get('/menu-items', { params });
       const data = response.data.data;
       if (data && Array.isArray(data.items)) {
-        return data.items;
+        return {
+          items: data.items,
+          total: data.pagination?.total || 0,
+          total_pages: data.pagination?.total_pages || 0
+        };
       }
-      return data || response.data || [];
+      return { items: [], total: 0, total_pages: 0 };
     } catch (error) {
       console.error('Error fetching menu items:', error);
       throw error;

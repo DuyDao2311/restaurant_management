@@ -3,6 +3,7 @@ import { Order } from '../../../types/order.types';
 import { orderService } from '../../../services/orderService';
 import { useState } from 'react';
 import { useToast } from '../../../context/ToastContext';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 interface OrderDetailModalProps {
   order: Order;
@@ -14,6 +15,7 @@ const STATUSES = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'SERVED', 'COMPL
 
 const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const { showToast } = useToast();
 
   const handleStatusChange = async (newStatus: string) => {
@@ -28,9 +30,13 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
     }
   };
 
-  const handleCancelOrder = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy Order này?")) return;
+  const handleCancelOrder = () => {
+    setShowCancelConfirm(true);
+  };
+
+  const executeCancelOrder = async () => {
     setIsUpdating(true);
+    setShowCancelConfirm(false);
     try {
       const updated = await orderService.cancelOrder(order.id);
       onStatusUpdated(updated);
@@ -188,6 +194,15 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdated }: OrderDetailModalP
         </div>
 
       </div>
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        title="Xác nhận hủy"
+        message="Bạn có chắc chắn muốn hủy Order này không?"
+        onConfirm={executeCancelOrder}
+        onCancel={() => setShowCancelConfirm(false)}
+        variant="danger"
+      />
     </div>
   );
 };

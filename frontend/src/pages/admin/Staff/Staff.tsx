@@ -6,6 +6,7 @@ import StaffModal from './StaffModal';
 import StaffDetailModal from './StaffDetailModal';
 import PaginationComponent from '../../../components/common/Pagination';
 import { useToast } from '../../../context/ToastContext';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 const StaffPage = () => {
   const { showToast } = useToast();
@@ -24,6 +25,19 @@ const StaffPage = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
 
   // Debounce search
   useEffect(() => {
@@ -99,35 +113,51 @@ const StaffPage = () => {
     }
   };
 
-  const handleToggleStatus = async (staff: Staff) => {
+  const handleToggleStatus = (staff: Staff) => {
     const action = staff.status === 'ACTIVE' ? 'khóa' : 'mở khóa';
-    if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản này?`)) return;
-
-    try {
-      const newStatus = staff.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      const res = await staffService.updateStaffStatus(staff.id, newStatus);
-      if (res.success) {
-        showToast(res.message, 'success');
-        fetchStaff();
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xác nhận trạng thái',
+      message: `Bạn có chắc muốn ${action} tài khoản này?`,
+      variant: staff.status === 'ACTIVE' ? 'warning' : 'primary',
+      onConfirm: async () => {
+        try {
+          const newStatus = staff.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+          const res = await staffService.updateStaffStatus(staff.id, newStatus);
+          if (res.success) {
+            showToast(res.message, 'success');
+            fetchStaff();
+          }
+        } catch (err) {
+          showToast(`Lỗi khi ${action} tài khoản`, 'error');
+        } finally {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
       }
-    } catch (err) {
-      showToast(`Lỗi khi ${action} tài khoản`, 'error');
-    }
+    });
   };
 
-  const handleDelete = async (staff: Staff) => {
-    if (!window.confirm('Bạn có chắc muốn xóa Staff này?')) return;
-
-    try {
-      const res = await staffService.deleteStaff(staff.id);
-      if (res.success) {
-        showToast(res.message || 'Xóa Staff thành công', 'success');
-        fetchStaff();
+  const handleDelete = (staff: Staff) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa Staff này?',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await staffService.deleteStaff(staff.id);
+          if (res.success) {
+            showToast(res.message || 'Xóa Staff thành công', 'success');
+            fetchStaff();
+          }
+        } catch (err: any) {
+          const errorMsg = err.response?.data?.message || 'Lỗi khi xóa Staff';
+          showToast(errorMsg, 'error');
+        } finally {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Lỗi khi xóa Staff';
-      showToast(errorMsg, 'error');
-    }
+    });
   };
 
   return (
@@ -195,7 +225,7 @@ const StaffPage = () => {
           <p className="text-gray-500">Đang tải danh sách Staff...</p>
         </div>
       ) : (
-        <>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <StaffTable
             staffList={staffList}
             onView={handleOpenDetailModal}
@@ -205,9 +235,11 @@ const StaffPage = () => {
           />
 
           {/* Pagination */}
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+          <div className="bg-white px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between">
             <div className="mb-4 sm:mb-0">
-              Hiển thị <span className="font-semibold text-gray-900">{staffList.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)}</span> trên tổng số <span className="font-semibold text-gray-900">{pagination.total}</span> nhân viên
+              <p className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+                HIỂN THỊ <span className="font-bold text-gray-700">{staffList.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1}</span> - <span className="font-bold text-gray-700">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> TRÊN TỔNG SỐ <span className="font-bold text-gray-700">{pagination.total}</span>
+              </p>
             </div>
             {pagination.total_pages > 0 && (
               <PaginationComponent
@@ -217,7 +249,7 @@ const StaffPage = () => {
               />
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Modals */}
@@ -233,6 +265,15 @@ const StaffPage = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         staff={selectedStaff}
+      />
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        variant={confirmConfig.variant}
       />
     </div>
   );

@@ -10,8 +10,12 @@ import { tableSessionService } from '../../../services/tableSessionService';
 import { Order } from '../../../types/order.types';
 import { RestaurantTable } from '../../../types/table';
 import { TableSession } from '../../../types/table_session.types';
+import { Payment } from '../../../types/payment.types';
 import OrderDetailModal from '../../admin/Orders/OrderDetailModal';
+import PaymentModal from './PaymentModal';
 import { useToast } from '../../../context/ToastContext';
+import { paymentService } from '../../../services/paymentService';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 const StaffOrders = () => {
   const navigate = useNavigate();
@@ -21,12 +25,18 @@ const StaffOrders = () => {
   const [activeSession, setActiveSession] = useState<TableSession | null>(null);
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<Record<number, Payment>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [payingOrder, setPayingOrder] = useState<Order | null>(null);
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showCloseSessionConfirm, setShowCloseSessionConfirm] = useState(false);
+  const [isPayingSession, setIsPayingSession] = useState(false);
+  const [isConfirmingSessionPayment, setIsConfirmingSessionPayment] = useState(false);
 
   // Per-table running order counts (table_id -> {count, total})
   const [tableOrderInfo, setTableOrderInfo] = useState<Record<number, { count: number; total: number }>>({});
@@ -101,7 +111,26 @@ const StaffOrders = () => {
   const fetchOrdersForSession = async (sessionId: number) => {
     try {
       const response = await tableSessionService.getOrdersBySession(sessionId);
-      setOrders(response.items || []);
+      const fetchedOrders: Order[] = response.items || [];
+      setOrders(fetchedOrders);
+
+      // Fetch payments for these orders
+      const paymentsMap: Record<number, Payment> = {};
+      await Promise.all(
+        fetchedOrders.map(async (order) => {
+          if (order.status !== 'CANCELLED') {
+            try {
+              const payment = await paymentService.getPaymentByOrderId(order.id);
+              if (payment) {
+                paymentsMap[order.id] = payment;
+              }
+            } catch (err) {
+              console.error(`Failed to fetch payment for order ${order.id}`);
+            }
+          }
+        })
+      );
+      setPayments(paymentsMap);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
     }
@@ -124,12 +153,55 @@ const StaffOrders = () => {
       return;
     }
 
-    if (!window.confirm('Bàn đã hoàn tất phục vụ.\nBạn có chắc chắn muốn đóng phiên và thanh toán?')) {
+    if (pendingAmount > 0) {
+      setIsPayingSession(true);
+    } else {
+      setShowCloseSessionConfirm(true);
+    }
+  };
+
+  const handleConfirmSessionPayment = async (method: string, transactionCode?: string) => {
+    if (method === 'BANK_TRANSFER' && (!transactionCode || !transactionCode.trim())) {
+      showToast('Vui lòng nhập mã giao dịch.', 'warning');
       return;
     }
 
+    setIsConfirmingSessionPayment(true);
     try {
-      await tableSessionService.closeSession(activeSession.id);
+      // Find all unpaid payments
+      const unpaidPayments = activeOrders
+        .map(o => payments[o.id])
+        .filter(p => p && p.status !== 'PAID' && p.status !== 'REFUNDED');
+
+      // Pay them all
+      await Promise.all(
+        unpaidPayments.map(p => 
+          paymentService.confirmPayment(p.id, {
+            payment_method: method as any,
+            transaction_code: transactionCode
+          })
+        )
+      );
+
+      // Close session
+      await tableSessionService.closeSession(activeSession!.id);
+      showToast('Thanh toán và đóng phiên thành công!', 'success');
+      
+      setIsPayingSession(false);
+      refreshCurrentSession();
+      fetchTables();
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Lỗi khi thanh toán phiên';
+      showToast(msg, 'error');
+    } finally {
+      setIsConfirmingSessionPayment(false);
+    }
+  };
+
+  const executeCloseSession = async () => {
+    setShowCloseSessionConfirm(false);
+    try {
+      await tableSessionService.closeSession(activeSession!.id);
       showToast('Đóng phiên bàn thành công.', 'success');
       refreshCurrentSession();
       fetchTables();
@@ -167,6 +239,47 @@ const StaffOrders = () => {
   const handleOrderUpdated = (updatedOrder: Order) => {
     setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
     setSelectedOrder(updatedOrder);
+    if (updatedOrder.status === 'CANCELLED' && payments[updatedOrder.id]) {
+      setPayments(prev => ({
+        ...prev,
+        [updatedOrder.id]: { ...prev[updatedOrder.id], status: 'FAILED' }
+      }));
+    }
+  };
+
+  const handleConfirmPayment = async (method: string, transactionCode?: string) => {
+    if (!payingOrder || !payments[payingOrder.id]) return;
+
+    if (method === 'BANK_TRANSFER' && (!transactionCode || !transactionCode.trim())) {
+      showToast('Vui lòng nhập mã giao dịch.', 'warning');
+      return;
+    }
+    
+    setIsConfirmingPayment(true);
+    try {
+      const paymentId = payments[payingOrder.id].id;
+      const updatedPayment = await paymentService.confirmPayment(paymentId, {
+        payment_method: method as any,
+        transaction_code: transactionCode
+      });
+      
+      showToast('Thanh toán thành công!', 'success');
+      
+      setPayments(prev => ({
+        ...prev,
+        [payingOrder.id]: updatedPayment
+      }));
+      setPayingOrder(null);
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || 'Không thể xác nhận thanh toán';
+      showToast(msg, 'error');
+      if (msg.includes('đã được thanh toán')) {
+         if (activeSession) fetchOrdersForSession(activeSession.id);
+         setPayingOrder(null);
+      }
+    } finally {
+      setIsConfirmingPayment(false);
+    }
   };
 
   const openOrderDetails = async (id: number) => {
@@ -201,6 +314,12 @@ const StaffOrders = () => {
   const activeOrders = orders.filter(o => o.status !== 'CANCELLED');
   const sessionTotal = activeOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
   const uncompletedOrdersCount = activeOrders.filter(o => o.status !== 'COMPLETED').length;
+
+  const paidAmount = activeOrders.reduce((sum, o) => {
+    const p = payments[o.id];
+    return p && p.status === 'PAID' ? sum + Number(p.amount) : sum;
+  }, 0);
+  const pendingAmount = sessionTotal - paidAmount;
 
   const filteredTables = useMemo(() => {
     if (!searchTerm) return tables;
@@ -398,7 +517,7 @@ const StaffOrders = () => {
               </div>
 
               {/* Session Info Grid */}
-              <div className="grid grid-cols-4 gap-0 bg-white border border-[#e8e5e0] rounded-xl mb-5 overflow-hidden">
+              <div className="grid grid-cols-5 gap-0 bg-white border border-[#e8e5e0] rounded-xl mb-5 overflow-hidden">
                 <div className="px-5 py-[18px] border-r border-[#f0ede8]">
                   <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Khách Hàng</div>
                   <div className="text-[15px] font-bold text-[#1a1a1a]">
@@ -413,23 +532,23 @@ const StaffOrders = () => {
                       {activeSession.reservation?.number_of_guests || '–'} người
                     </span>
                   </div>
-                  <div className="text-[11px] text-[#aaa] mt-1 flex items-center gap-1">
-                    Bàn {selectedTableData?.capacity} chỗ
-                  </div>
                 </div>
                 <div className="px-5 py-[18px] border-r border-[#f0ede8]">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Thời Gian Bắt Đầu</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Bắt Đầu</div>
                   <div className="text-[15px] font-bold text-[#1a1a1a]">
                     {formatTime(activeSession.started_at)}
                   </div>
-                  <div className="text-[11px] text-[#aaa] mt-1 flex items-center gap-1">
-                    {formatDate(activeSession.started_at)}
+                </div>
+                <div className="px-5 py-[18px] border-r border-[#f0ede8]">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Đã Thanh Toán</div>
+                  <div className="text-[18px] font-extrabold text-[#16a34a]">
+                    {formatCurrency(paidAmount)} <span className="text-[13px] font-medium">đ</span>
                   </div>
                 </div>
                 <div className="px-5 py-[18px]">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Tổng Chi Tiêu Hiện Tại</div>
-                  <div className="text-[24px] font-extrabold text-[#1a1a1a]">
-                    {formatCurrency(sessionTotal)} <span className="text-[14px] font-medium">đ</span>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#999] mb-1.5">Còn Phải Thanh Toán</div>
+                  <div className="text-[18px] font-extrabold text-[#c44b4b]">
+                    {formatCurrency(pendingAmount)} <span className="text-[13px] font-medium">đ</span>
                   </div>
                 </div>
               </div>
@@ -447,7 +566,7 @@ const StaffOrders = () => {
                     className="flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-[#555] border-[1.5px] border-[#e0dcd5] rounded-xl text-sm font-semibold transition-all duration-200 hover:bg-[#faf9f7] hover:border-[#c4a87c] hover:text-[#333] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-[#e0dcd5] disabled:hover:text-[#555] font-['Inter']"
                     onClick={handleCloseSession}
                     disabled={uncompletedOrdersCount > 0}
-                    title={uncompletedOrdersCount > 0 ? 'Vẫn còn Order chưa hoàn thành' : 'Đóng phiên phục vụ'}
+                    title={uncompletedOrdersCount > 0 ? 'Vẫn còn Order chưa hoàn thành' : 'Thanh toán & Đóng phiên phục vụ'}
                   >
                     <Timer className="w-[18px] h-[18px]" /> Đóng Session / Thanh Toán Bàn
                   </button>
@@ -597,17 +716,82 @@ const StaffOrders = () => {
                                     )}
                                   </div>
 
-                                  <div className="flex items-center justify-between pt-3.5 border-t border-dashed border-[#e8e5e0]">
-                                    <div className="flex items-center gap-1.5 text-xs text-[#6b8f5e]">
-                                      <CheckCircle className="w-3.5 h-3.5" />
-                                      {getStatusMessage(order)}
+                                  {/* PAYMENT INFO BLOCK */}
+                                  {payments[order.id] && (
+                                    <div className="bg-[#fcfaf8] border border-[#e8e5e0] rounded-[10px] p-4 mb-4 flex flex-col sm:flex-row justify-between gap-4">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-8 text-[13px]">
+                                        <div className="flex">
+                                          <span className="text-[#888] w-[110px]">Trạng thái:</span>
+                                          {payments[order.id].status === 'PAID' ? (
+                                            <span className="font-bold text-[#16a34a]">✓ Đã thanh toán</span>
+                                          ) : payments[order.id].status === 'FAILED' ? (
+                                            <span className="font-bold text-[#dc2626]">✕ Thanh toán thất bại</span>
+                                          ) : payments[order.id].status === 'REFUNDED' ? (
+                                            <span className="font-bold text-[#dc2626]">↩ Đã hoàn tiền</span>
+                                          ) : (
+                                            <span className="font-bold text-[#c4943a]">● Chờ thanh toán</span>
+                                          )}
+                                        </div>
+                                        <div className="flex">
+                                          <span className="text-[#888] w-[110px]">Số tiền:</span>
+                                          <span className="font-bold text-[#1a1a1a]">{formatCurrency(Number(payments[order.id].amount))} đ</span>
+                                        </div>
+                                        <div className="flex">
+                                          <span className="text-[#888] w-[110px]">Phương thức:</span>
+                                          <span className="font-medium text-[#1a1a1a]">
+                                            {payments[order.id].status === 'PENDING' ? '—' : (payments[order.id].payment_method === 'CASH' ? 'Tiền mặt' : payments[order.id].payment_method === 'BANK_TRANSFER' ? 'Chuyển khoản' : payments[order.id].payment_method)}
+                                          </span>
+                                        </div>
+                                        <div className="flex">
+                                          <span className="text-[#888] w-[110px]">Thanh toán lúc:</span>
+                                          <span className="font-medium text-[#1a1a1a]">
+                                            {payments[order.id].paid_at ? new Date(payments[order.id].paid_at!).toLocaleString('vi-VN') : '—'}
+                                          </span>
+                                        </div>
+                                        {payments[order.id].payment_method === 'BANK_TRANSFER' && payments[order.id].transaction_code && (
+                                          <div className="flex">
+                                            <span className="text-[#888] w-[110px]">Mã giao dịch:</span>
+                                            <span className="font-medium text-[#1a1a1a]">{payments[order.id].transaction_code}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="flex items-end">
+                                        {payments[order.id].status === 'PENDING' && (
+                                          <button
+                                            className="px-[18px] py-2 border-[1.5px] border-[#c4a87c] bg-[#c4a87c] text-white rounded-lg text-xs font-bold cursor-pointer transition-colors duration-150 font-['Inter'] hover:bg-[#b4986c] hover:border-[#b4986c]"
+                                            onClick={() => setPayingOrder(order)}
+                                          >
+                                            [Đã thanh toán]
+                                          </button>
+                                        )}
+                                        {payments[order.id].status === 'PAID' && (
+                                          <button
+                                            disabled
+                                            className="px-[18px] py-2 border-[1.5px] border-[#e8e5e0] bg-[#f5f3f0] text-[#16a34a] rounded-lg text-xs font-bold cursor-not-allowed font-['Inter']"
+                                          >
+                                            [✓ Đã thanh toán]
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
-                                    <button
-                                      className="px-[18px] py-2 border-[1.5px] border-[#1a1a1a] rounded-lg bg-white text-[#1a1a1a] text-xs font-bold cursor-pointer transition-colors duration-150 font-['Inter'] hover:bg-[#1a1a1a] hover:text-white"
-                                      onClick={() => openOrderDetails(order.id)}
-                                    >
-                                      Cập Nhật Trạng Thái Món
-                                    </button>
+                                  )}
+
+                                  <div className="flex items-center justify-between pt-3.5 border-t border-dashed border-[#e8e5e0]">
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex items-center gap-1.5 text-xs text-[#6b8f5e]">
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        {getStatusMessage(order)}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        className="px-[18px] py-2 border-[1.5px] border-[#1a1a1a] rounded-lg bg-white text-[#1a1a1a] text-xs font-bold cursor-pointer transition-colors duration-150 font-['Inter'] hover:bg-[#1a1a1a] hover:text-white"
+                                        onClick={() => openOrderDetails(order.id)}
+                                      >
+                                        Cập Nhật Trạng Thái Món
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -651,6 +835,38 @@ const StaffOrders = () => {
           onStatusUpdated={handleOrderUpdated}
         />
       )}
+
+      {/* Payment Modal for individual order */}
+      {payingOrder && payments[payingOrder.id] && (
+        <PaymentModal
+          order={payingOrder}
+          paymentAmount={Number(payments[payingOrder.id].amount)}
+          isLoading={isConfirmingPayment}
+          onClose={() => setPayingOrder(null)}
+          onConfirm={handleConfirmPayment}
+        />
+      )}
+
+      {/* Payment Modal for entire session */}
+      {isPayingSession && activeSession && selectedTableData && (
+        <PaymentModal
+          sessionName={`Bàn ${selectedTableData.table_number}`}
+          paymentAmount={pendingAmount}
+          isLoading={isConfirmingSessionPayment}
+          onClose={() => setIsPayingSession(false)}
+          onConfirm={handleConfirmSessionPayment}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={showCloseSessionConfirm}
+        title="Xác nhận đóng phiên"
+        message="Bàn đã hoàn tất phục vụ. Bạn có chắc chắn muốn đóng phiên và thanh toán?"
+        onConfirm={executeCloseSession}
+        onCancel={() => setShowCloseSessionConfirm(false)}
+        variant="warning"
+        confirmText="Đóng phiên"
+      />
     </div>
   );
 };

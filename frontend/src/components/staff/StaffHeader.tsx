@@ -13,7 +13,6 @@ interface StaffHeaderProps {
 }
 
 const pageTitleMap: Record<string, string> = {
-  '/staff/dashboard': 'Dashboard',
   '/staff/tables': 'Tables',
   '/staff/orders': 'Orders',
 };

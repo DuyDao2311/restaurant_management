@@ -17,6 +17,8 @@ from app.models.table_session import TableSession
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderResponse, OrderListResponse, OrderStatusUpdate
 from app.dependencies.auth import get_current_user, require_admin_or_staff
+from app.services import payment_service
+from app.models.payment import Payment
 
 router = APIRouter()
 
@@ -141,6 +143,9 @@ def create_order(
         )
         db.add(order_item)
         
+    # Create Payment for Order
+    payment_service.create_payment_for_order(db, new_order)
+        
     db.commit()
     db.refresh(new_order)
     
@@ -233,6 +238,15 @@ def update_order_status(
             item.status = new_status
             item.updated_at = datetime.now()
 
+    if new_status == "CANCELLED":
+        payment = db.query(Payment).with_for_update().filter(
+            Payment.order_id == order_id, 
+            Payment.status == "PENDING"
+        ).first()
+        if payment:
+            payment.status = "FAILED"
+            payment.updated_at = datetime.now()
+
     db.commit()
     db.refresh(order)
     
@@ -260,6 +274,14 @@ def cancel_order(
     for item in order.order_items:
         item.status = "CANCELLED"
         item.updated_at = datetime.now()
+        
+    payment = db.query(Payment).with_for_update().filter(
+        Payment.order_id == order_id, 
+        Payment.status == "PENDING"
+    ).first()
+    if payment:
+        payment.status = "FAILED"
+        payment.updated_at = datetime.now()
         
     db.commit()
     db.refresh(order)

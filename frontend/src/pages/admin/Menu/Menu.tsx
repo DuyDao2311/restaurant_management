@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, ArrowUpDown, RefreshCw, Eye, Pencil, ToggleLeft, ToggleRight, Plus } from 'lucide-react';
 import { menuService } from '../../../services/menuService';
 import { categoryService } from '../../../services/categoryService';
-import { MenuItem, Category } from '../../../types';
+import { MenuItem, Category, Pagination } from '../../../types';
+import PaginationComponent from '../../../components/common/Pagination';
 
 
 const formatCurrency = (value: number) => {
@@ -16,7 +17,20 @@ const MenuPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, total_pages: 0 });
   const [viewItem, setViewItem] = useState<MenuItem | null>(null);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -24,10 +38,21 @@ const MenuPage = () => {
       const categoryRes = await categoryService.getCategories(1, 100);
       const fetchedCategories = categoryRes.data?.items || [];
 
-      const fetchedItems = await menuService.getAllMenuItems();
+      const fetchedItemsRes = await menuService.getAllMenuItems({
+        page: pagination.page,
+        limit: pagination.limit,
+        category_id: categoryFilter === '' ? undefined : categoryFilter,
+        status: statusFilter || undefined,
+        search: debouncedSearch || undefined
+      });
 
       setCategories(fetchedCategories);
-      setItems(fetchedItems);
+      setItems(fetchedItemsRes.items);
+      setPagination(prev => ({
+        ...prev,
+        total: fetchedItemsRes.total,
+        total_pages: fetchedItemsRes.total_pages
+      }));
     } catch (error) {
       console.error("Failed to load data, using mock data", error);
     } finally {
@@ -37,7 +62,13 @@ const MenuPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [pagination.page, debouncedSearch, statusFilter, categoryFilter]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.total_pages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
+    }
+  };
 
   const getCategoryName = (categoryId: number) => {
     return categories.find(c => c.id === categoryId)?.name || 'Chưa phân loại';
@@ -97,13 +128,23 @@ const MenuPage = () => {
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
           <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
             className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
           >
-            <option>Tất cả trạng thái</option>
-            <option>Còn hàng</option>
-            <option>Hết hàng</option>
+            <option value="">Tất cả trạng thái</option>
+            <option value="ACTIVE">Hoạt động</option>
+            <option value="INACTIVE">Ngừng hoạt động</option>
           </select>
           <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value === '' ? '' : Number(e.target.value));
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
             className="w-full sm:w-auto border border-gray-200 rounded-lg text-sm px-4 py-2.5 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#B4975A] focus:border-[#B4975A] transition-colors cursor-pointer outline-none shadow-sm"
           >
             <option value="">Tất cả các món ăn</option>
@@ -230,32 +271,20 @@ const MenuPage = () => {
         </div>
 
         {/* Pagination */}
-        <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between mt-auto">
-          <div>
-            <p className="text-sm text-gray-700">
-              Đang hiển thị <span className="font-medium">1</span> - <span className="font-medium">{items.length}</span> trên tổng số <span className="font-medium">{items.length}</span> món ăn
+        <div className="bg-white px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between mt-auto">
+          <div className="mb-4 sm:mb-0">
+            <p className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+              HIỂN THỊ <span className="font-bold text-gray-700">{items.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1}</span> - <span className="font-bold text-gray-700">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> TRÊN TỔNG SỐ <span className="font-bold text-gray-700">{pagination.total}</span>
             </p>
           </div>
           <div>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button disabled className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-50 text-sm font-medium text-gray-300">
-                <span className="sr-only">Previous</span>
-                <span aria-hidden="true">&lt;</span>
-              </button>
-              {Array.from({ length: Math.max(1, Math.ceil(items.length / 10)) }).map((_, i) => (
-                <button
-                  key={i}
-                  aria-current={i === 0 ? "page" : undefined}
-                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${i === 0 ? 'z-10 bg-black text-white border-black' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button disabled className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-50 text-sm font-medium text-gray-300">
-                <span className="sr-only">Next</span>
-                <span aria-hidden="true">&gt;</span>
-              </button>
-            </nav>
+            {pagination.total_pages > 0 && (
+              <PaginationComponent
+                currentPage={pagination.page}
+                totalPages={pagination.total_pages}
+                onPageChange={handlePageChange}
+              />
+            )}
           </div>
         </div>
       </div>

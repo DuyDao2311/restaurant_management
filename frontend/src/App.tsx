@@ -23,6 +23,7 @@ import TablesPage from './pages/admin/Tables/Tables';
 import TableDetail from './pages/admin/Tables/TableDetail';
 import ReservationsPage from './pages/admin/Reservations/Reservations';
 import OrdersPage from './pages/admin/Orders/Orders';
+import AdminPaymentsPage from './pages/admin/Payments/AdminPayments';
 import CustomersPage from './pages/admin/Customers/Customers';
 import StaffPage from './pages/admin/Staff/Staff';
 import PromotionsPage from './pages/admin/Promotions/Promotions';
@@ -30,12 +31,11 @@ import ReportsPage from './pages/admin/Reports/Reports';
 import NotificationsPage from './pages/admin/Notifications/Notifications';
 import SettingsPage from './pages/admin/Settings/Settings';
 
-// Staff Pages
-import StaffDashboardPage from './pages/staff/Dashboard/StaffDashboard';
 import StaffTablesPage from './pages/staff/Tables/StaffTables';
 import StaffOrdersPage from './pages/staff/Orders/StaffOrders';
 import StaffCreateOrderPage from './pages/staff/Orders/StaffCreateOrder';
 import StaffReservationsPage from './pages/staff/Reservations/Reservations';
+import StaffPaymentsPage from './pages/staff/Payments/StaffPayments';
 
 function App() {
   return (
@@ -66,6 +66,7 @@ function App() {
               <Route path="tables/:id" element={<TableDetail />} />
               <Route path="reservations" element={<ReservationsPage />} />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="payments" element={<AdminPaymentsPage />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="staff" element={<StaffPage />} />
               <Route path="promotions" element={<PromotionsPage />} />
@@ -78,11 +79,11 @@ function App() {
           {/* Protected Staff Routes */}
           <Route element={<ProtectedRoute allowedRoles={['STAFF', 'ADMIN']} />}>
             <Route path="/staff" element={<StaffLayout />}>
-              <Route index element={<Navigate to="/staff/dashboard" replace />} />
-              <Route path="dashboard" element={<StaffDashboardPage />} />
+              <Route index element={<Navigate to="/staff/reservations" replace />} />
               <Route path="tables" element={<StaffTablesPage />} />
               <Route path="reservations" element={<StaffReservationsPage />} />
               <Route path="orders" element={<StaffOrdersPage />} />
+              <Route path="payments" element={<StaffPaymentsPage />} />
               <Route path="orders/create" element={<StaffCreateOrderPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>

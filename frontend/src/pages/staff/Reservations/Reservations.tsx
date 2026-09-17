@@ -5,6 +5,7 @@ import { Search, Filter, Eye, CheckCircle, XCircle, UserCheck } from 'lucide-rea
 import AssignTableModal from './AssignTableModal';
 import RejectReservationModal from './RejectReservationModal';
 import ReservationDetailModal from './ReservationDetailModal';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 import Pagination from '../../../components/common/Pagination';
 
 const Reservations: React.FC = () => {
@@ -22,7 +23,7 @@ const Reservations: React.FC = () => {
 
   // Modals state
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [modalType, setModalType] = useState<'DETAIL' | 'ASSIGN' | 'REJECT' | null>(null);
+  const [modalType, setModalType] = useState<'DETAIL' | 'ASSIGN' | 'REJECT' | 'CHECK_IN' | null>(null);
 
   const fetchReservations = async () => {
     setLoading(true);
@@ -57,20 +58,19 @@ const Reservations: React.FC = () => {
     fetchReservations();
   };
 
-  const openModal = (reservation: Reservation, type: 'DETAIL' | 'ASSIGN' | 'REJECT') => {
+  const openModal = (reservation: Reservation, type: 'DETAIL' | 'ASSIGN' | 'REJECT' | 'CHECK_IN') => {
     setSelectedReservation(reservation);
     setModalType(type);
   };
 
-  const handleCheckIn = async (reservation: Reservation) => {
-    if (!window.confirm(`Xác nhận Check-in cho đơn đặt bàn ${reservation.reservation_code}?`)) return;
-
+  const handleCheckInConfirm = async () => {
+    if (!selectedReservation) return;
     try {
-      await staffReservationService.checkInReservation(reservation.id);
-      // Fetch again to update table status
-      fetchReservations();
+      await staffReservationService.checkInReservation(selectedReservation.id);
+      handleActionSuccess();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Lỗi khi Check-in');
+      setModalType(null);
     }
   };
 
@@ -254,7 +254,7 @@ const Reservations: React.FC = () => {
                         )}
                         {res.status === 'CONFIRMED' && (
                           <button
-                            onClick={() => handleCheckIn(res)}
+                            onClick={() => openModal(res, 'CHECK_IN')}
                             className="w-[34px] h-[34px] rounded-full border border-blue-200 flex items-center justify-center text-blue-500 hover:bg-blue-50 transition-colors bg-white shadow-sm"
                             title="Check-in (Khách đến)"
                           >
@@ -309,6 +309,18 @@ const Reservations: React.FC = () => {
           onSuccess={handleActionSuccess}
         />
       )}
+
+      <ConfirmModal
+        isOpen={modalType === 'CHECK_IN' && selectedReservation !== null}
+        title="Xác nhận Check-in"
+        message={
+          <>
+            Bạn có chắc chắn muốn xác nhận Check-in cho đơn đặt bàn <span className="font-bold text-gray-900">{selectedReservation?.reservation_code}</span> không?
+          </>
+        }
+        onConfirm={handleCheckInConfirm}
+        onCancel={() => setModalType(null)}
+      />
     </div>
   );
 };
